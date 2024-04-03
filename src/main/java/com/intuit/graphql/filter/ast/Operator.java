@@ -1,5 +1,6 @@
 /*
   Copyright 2020 Intuit Inc.
+  Modifications Copyright 2024 Jean Luck Sossmeier
 
   Licensed under the Apache License, Version 2.0 (the "License");
   you may not use this file except in compliance with the License.
@@ -16,92 +17,43 @@
 package com.intuit.graphql.filter.ast;
 
 /**
- * Enum of operators for supporting relational
- * and logical expressions.
+ * Class of operators for supporting relational and logical expressions.
  *
  * @author sjaiswal
+ * @author jeansossmeier
  */
-public enum Operator {
-
-    /* Logical Operators */
-    AND("and", "Logical",  Kind.COMPOUND),
-    OR ("or", "Logical",  Kind.COMPOUND),
-    NOT ("not", "Logical", Kind.UNARY),
-
-    /* String Operators */
-    EQUALS("equals", "String", Kind.BINARY),
-    CONTAINS("contains", "String",  Kind.BINARY),
-    STARTS("starts", "String",  Kind.BINARY),
-    ENDS("ends", "String",  Kind.BINARY),
-
-    /* Numeric Operators */
-    EQ("eq", "Numeric", Kind.BINARY),
-    GT("gt", "Numeric",  Kind.BINARY),
-    GTE("gte", "Numeric",  Kind.BINARY),
-    LT("lt", "Numeric",  Kind.BINARY),
-    LTE("lte", "Numeric",  Kind.BINARY),
-
-    /* Range Operators */
-    IN("in", "String|Numeric",  Kind.BINARY),
-    BETWEEN("between","DateTime|Numeric", Kind.BINARY);
-
-    /**
-     * Enum of operator kind.
-     */
-    enum Kind {
-        COMPOUND,
-        BINARY,
-        UNARY;
-    }
-
+public class Operator {
     private String name;
     private String type;
     private Kind kind;
 
-    Operator(String name, String type, Kind kind) {
-        this.type = type;
+    public Operator(String name, String type, Kind kind) {
         this.name = name;
+        this.type = type;
         this.kind = kind;
     }
 
-    /**
-     * Returns the Operator enum based
-     * on operator name.
-     * @param name
-     * @return
-     */
-    public static Operator getOperator(String name) {
-        for (Operator operator : Operator.values()) {
-            if (operator.getName().equals(name)) {
-                return operator;
-            }
-        }
-        throw new IllegalArgumentException(String.valueOf(name));
+    public String getName() { return name; }
+    public String getType() { return type; }
+    public Kind getKind() { return kind; }
+
+    public enum Kind {
+        COMPOUND, BINARY, UNARY
     }
 
-    /**
-     * Returns Operator kind based
-     * on operator name.
-     * @param name
-     * @return
-     */
-    public static String getOperatorKind(String name) {
-        return getOperator(name).getKind().name();
-    }
+    public static final Operator AND = new Operator("and", "Logical", Operator.Kind.COMPOUND);
 
-    /**
-     * Returns operator name.
-     * @return
-     */
-    public String getName() {
-        return name;
-    }
-
-    /**
-     * Returns operator kind.
-     * @return
-     */
-    public Kind getKind() {
-        return kind;
-    }
+    public static final Operator OR = new Operator("or", "Logical", Operator.Kind.COMPOUND);
+    public static final Operator NOT = new Operator("not", "Logical", Operator.Kind.UNARY);
+    public static final Operator EQUALS = new Operator("equals", "String", Operator.Kind.BINARY);
+    public static final Operator CONTAINS = new Operator("contains", "String", Operator.Kind.BINARY);
+    public static final Operator STARTS = new Operator("starts", "String", Operator.Kind.BINARY);
+    public static final Operator ENDS = new Operator("ends", "String", Operator.Kind.BINARY);
+    public static final Operator EQ = new Operator("eq", "Numeric", Operator.Kind.BINARY);
+    public static final Operator GT = new Operator("gt", "Numeric", Operator.Kind.BINARY);
+    public static final Operator GTE = new Operator("gte", "Numeric", Operator.Kind.BINARY);
+    public static final Operator LT = new Operator("lt", "Numeric", Operator.Kind.BINARY);
+    public static final Operator LTE = new Operator("lte", "Numeric", Operator.Kind.BINARY);
+    public static final Operator IN = new Operator("in", "String|Numeric", Operator.Kind.BINARY);
+    public static final Operator BETWEEN = new Operator("between", "DateTime|Numeric", Operator.Kind.BINARY);
 }

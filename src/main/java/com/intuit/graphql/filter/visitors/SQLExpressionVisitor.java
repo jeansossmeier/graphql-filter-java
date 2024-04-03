@@ -30,6 +30,21 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 
+import static com.intuit.graphql.filter.ast.Operator.AND;
+import static com.intuit.graphql.filter.ast.Operator.BETWEEN;
+import static com.intuit.graphql.filter.ast.Operator.CONTAINS;
+import static com.intuit.graphql.filter.ast.Operator.ENDS;
+import static com.intuit.graphql.filter.ast.Operator.EQ;
+import static com.intuit.graphql.filter.ast.Operator.EQUALS;
+import static com.intuit.graphql.filter.ast.Operator.GT;
+import static com.intuit.graphql.filter.ast.Operator.GTE;
+import static com.intuit.graphql.filter.ast.Operator.IN;
+import static com.intuit.graphql.filter.ast.Operator.LT;
+import static com.intuit.graphql.filter.ast.Operator.LTE;
+import static com.intuit.graphql.filter.ast.Operator.NOT;
+import static com.intuit.graphql.filter.ast.Operator.OR;
+import static com.intuit.graphql.filter.ast.Operator.STARTS;
+
 /**
  * This class is responsible for traversing
  * the expression tree and generating an
@@ -207,48 +222,33 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
 
     private String resolveOperator(Operator operator) {
         String op = "";
-        switch (operator) {
-            /* Logical operators */
-            case AND:
-            case OR:
-            case NOT:
-                op = operator.getName().toUpperCase();
-                break;
+        /* Logical operators */
+        if (operator.equals(AND) || operator.equals(OR) || operator.equals(NOT)) {
+            op = operator.getName().toUpperCase();
 
             /* Relational string operators*/
-            case EQUALS:
-                op = "=";
-                break;
-            case CONTAINS:
-            case STARTS:
-            case ENDS:
-                op = "LIKE";
-                break;
+        } else if (operator.equals(EQUALS)) {
+            op = "=";
+        } else if (operator.equals(CONTAINS) || operator.equals(STARTS) || operator.equals(ENDS)) {
+            op = "LIKE";
 
             /* Relational numeric operators*/
-            case LT:
-                op = "<";
-                break;
-            case GT:
-                op = ">";
-                break;
-            case EQ:
-                op = "=";
-                break;
-            case GTE:
-                op = ">=";
-                break;
-            case LTE:
-                op = "<=";
-                break;
+        } else if (operator.equals(LT)) {
+            op = "<";
+        } else if (operator.equals(GT)) {
+            op = ">";
+        } else if (operator.equals(EQ)) {
+            op = "=";
+        } else if (operator.equals(GTE)) {
+            op = ">=";
+        } else if (operator.equals(LTE)) {
+            op = "<=";
 
             /* Common operators */
-            case IN:
-                op = "IN";
-                break;
-            case BETWEEN:
-                op = "BETWEEN";
-                break;
+        } else if (operator.equals(IN)) {
+            op = "IN";
+        } else if (operator.equals(BETWEEN)) {
+            op = "BETWEEN";
         }
         return op;
     }
