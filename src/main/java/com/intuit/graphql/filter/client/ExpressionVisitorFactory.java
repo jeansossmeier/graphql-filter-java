@@ -30,8 +30,9 @@ import java.util.Map;
  * expression visitors.
  *
  * @author sjaiswal
+ * @author jeansossmeier
  */
-class ExpressionVisitorFactory {
+public class ExpressionVisitorFactory {
 
     /**
      * Factory method for creating and returning

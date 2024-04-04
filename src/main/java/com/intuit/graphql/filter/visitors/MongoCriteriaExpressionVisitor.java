@@ -20,6 +20,7 @@ import com.intuit.graphql.filter.ast.CompoundExpression;
 import com.intuit.graphql.filter.ast.Expression;
 import com.intuit.graphql.filter.ast.ExpressionField;
 import com.intuit.graphql.filter.ast.ExpressionValue;
+import com.intuit.graphql.filter.ast.Operator;
 import com.intuit.graphql.filter.ast.UnaryExpression;
 import com.intuit.graphql.filter.client.FieldValuePair;
 import com.intuit.graphql.filter.client.FieldValueTransformer;
@@ -27,6 +28,7 @@ import org.springframework.data.mongodb.core.query.Criteria;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -35,6 +37,7 @@ import java.util.Map;
  * generating a compound mongo {@link Criteria} from it with correct precedence order.
  *
  * @author Sohan Lal
+ * @author jeansossmeier
  */
 public class MongoCriteriaExpressionVisitor<T> implements ExpressionVisitor<Criteria> {
 
@@ -45,6 +48,66 @@ public class MongoCriteriaExpressionVisitor<T> implements ExpressionVisitor<Crit
     private final Map<String, String> fieldMap;
     private final Deque<String> fieldStack;
     private final FieldValueTransformer fieldValueTransformer;
+
+    @FunctionalInterface
+    public interface CriteriaStrategy {
+        Criteria apply(String fieldName, ExpressionValue<? extends Comparable> value);
+    }
+
+    private static final Map<Operator, CriteriaStrategy> MAPPINGS = new HashMap<>();
+
+    static {
+        MAPPINGS.put(Operator.STARTS, (fieldName, value) ->
+                Criteria.where(fieldName).regex(START_ANCHOR + value.value() + ANY_CHARACTERS));
+
+        MAPPINGS.put(Operator.ENDS, (fieldName, value) ->
+                Criteria.where(fieldName).regex(ANY_CHARACTERS + value.value() + END_ANCHOR));
+
+        MAPPINGS.put(Operator.CONTAINS, (fieldName, value) ->
+                Criteria.where(fieldName).regex(ANY_CHARACTERS + value.value() + ANY_CHARACTERS));
+
+        MAPPINGS.put(Operator.EQUALS, (fieldName, value) ->
+                Criteria.where(fieldName).is(value.value()));
+
+        MAPPINGS.put(Operator.LT, (fieldName, value) ->
+                Criteria.where(fieldName).lt(value.value()));
+
+        MAPPINGS.put(Operator.LTE, (fieldName, value) ->
+                Criteria.where(fieldName).lte(value.value()));
+
+        MAPPINGS.put(Operator.EQ, (fieldName, value) ->
+                Criteria.where(fieldName).is(value.value()));
+
+        MAPPINGS.put(Operator.GT, (fieldName, value) ->
+                Criteria.where(fieldName).gt(value.value()));
+
+        MAPPINGS.put(Operator.GTE, (fieldName, value) ->
+                Criteria.where(fieldName).gte(value.value()));
+
+        MAPPINGS.put(Operator.IN, (fieldName, value) -> {
+            List<Comparable> inValues = (List<Comparable>) value.value();
+            return Criteria.where(fieldName).in(inValues);
+        });
+
+        MAPPINGS.put(Operator.BETWEEN, (fieldName, value) -> {
+            List<Comparable> betweenValues = (List<Comparable>) value.value();
+            return Criteria.where(fieldName).gte(betweenValues.get(0)).lte(betweenValues.get(1));
+        });
+    }
+
+    public static Criteria getCriteria(Operator operator, String fieldName, ExpressionValue<? extends Comparable> value) {
+        return MAPPINGS.getOrDefault(operator, (f, v) -> {
+            throw new UnsupportedOperationException("Unsupported operator: " + operator);
+        }).apply(fieldName, value);
+    }
+
+    public static void addCriteria(Operator operator, CriteriaStrategy function) {
+        MAPPINGS.put(operator, function);
+    }
+
+    public static void removeCriteria(Operator operator) {
+        MAPPINGS.remove(operator);
+    }
 
     public MongoCriteriaExpressionVisitor(final Map<String, String> fieldMap, final FieldValueTransformer fieldValueTransformer) {
         this.fieldMap = fieldMap;
@@ -77,19 +140,15 @@ public class MongoCriteriaExpressionVisitor<T> implements ExpressionVisitor<Crit
     @Override
     public Criteria visitCompoundExpression(final CompoundExpression compoundExpression, final Criteria data) {
         Criteria result = null;
-        switch (compoundExpression.getOperator()) {
-            /* Logical operations.*/
-            case AND:
-                Criteria left = compoundExpression.getLeftOperand().accept(this, null);
-                Criteria right = compoundExpression.getRightOperand().accept(this, null);
-                result = new Criteria().andOperator(left, right);
-                break;
-
-            case OR:
-                left = compoundExpression.getLeftOperand().accept(this, null);
-                right = compoundExpression.getRightOperand().accept(this, null);
-                result = new Criteria().orOperator(left, right);
-                break;
+        Operator operator = compoundExpression.getOperator();
+        if (Operator.AND.equals(operator)) {
+            Criteria left = compoundExpression.getLeftOperand().accept(this, null);
+            Criteria right = compoundExpression.getRightOperand().accept(this, null);
+            result = new Criteria().andOperator(left, right);
+        } else if (Operator.OR.equals(operator)) {
+            Criteria right = compoundExpression.getRightOperand().accept(this, null);
+            Criteria left = compoundExpression.getLeftOperand().accept(this, null);
+            result = new Criteria().orOperator(left, right);
         }
         return result;
     }
@@ -103,63 +162,11 @@ public class MongoCriteriaExpressionVisitor<T> implements ExpressionVisitor<Crit
      */
     @Override
     public Criteria visitBinaryExpression(final BinaryExpression binaryExpression, final Criteria data) {
-        Criteria criteria = null;
         final String fieldName = mappedFieldName(binaryExpression.getLeftOperand().infix());
         ExpressionValue<? extends Comparable> operandValue = (ExpressionValue<? extends Comparable>) binaryExpression.getRightOperand();
         operandValue = getTransformedValue(operandValue);
-
-        switch (binaryExpression.getOperator()) {
-            /* String operations.*/
-            case STARTS:
-                criteria = Criteria.where(fieldName).regex(START_ANCHOR + operandValue.value() + ANY_CHARACTERS);
-                break;
-
-            case ENDS:
-                criteria = Criteria.where(fieldName).regex(ANY_CHARACTERS + operandValue.value() + END_ANCHOR);
-                break;
-
-            case CONTAINS:
-                criteria = Criteria.where(fieldName).regex(ANY_CHARACTERS + operandValue.value() + ANY_CHARACTERS);
-                break;
-
-            case EQUALS:
-                criteria = Criteria.where(fieldName).is(operandValue.value());
-                break;
-
-            /* Numeric operations.*/
-            case LT:
-                criteria = Criteria.where(fieldName).lt(operandValue.value());
-                break;
-
-            case LTE:
-                criteria = Criteria.where(fieldName).lte(operandValue.value());
-                break;
-
-            case EQ:
-                criteria = Criteria.where(fieldName).is(operandValue.value());
-                break;
-
-            case GT:
-                criteria = Criteria.where(fieldName).gt(operandValue.value());
-                break;
-
-            case GTE:
-                criteria = Criteria.where(fieldName).gte(operandValue.value());
-                break;
-
-            case IN:
-                List<Comparable> expressionInValues = (List<Comparable>) operandValue.value();
-                criteria = Criteria.where(fieldName).in(expressionInValues);
-                break;
-
-            case BETWEEN:
-                List<Comparable> expressionBetweenValues = (List<Comparable>) operandValue.value();
-                criteria = Criteria.where(fieldName).gte(expressionBetweenValues.get(0)).lte(expressionBetweenValues.get(1));
-                break;
-        }
-        return criteria;
+        return getCriteria(binaryExpression.getOperator(), fieldName, operandValue);
     }
-
     /**
      * Handles the processing of unary expression node.
      *

@@ -20,6 +20,7 @@ import com.intuit.graphql.filter.ast.CompoundExpression;
 import com.intuit.graphql.filter.ast.Expression;
 import com.intuit.graphql.filter.ast.ExpressionField;
 import com.intuit.graphql.filter.ast.ExpressionValue;
+import com.intuit.graphql.filter.ast.Operator;
 import com.intuit.graphql.filter.ast.UnaryExpression;
 import com.intuit.graphql.filter.client.FieldValuePair;
 import com.intuit.graphql.filter.client.FieldValueTransformer;
@@ -27,6 +28,7 @@ import org.springframework.data.elasticsearch.core.query.Criteria;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -43,6 +45,38 @@ public class ElasticsearchCriteriaExpressionVisitor implements ExpressionVisitor
     private final Map<String, String> fieldMap;
     private final Deque<String> fieldStack;
     private final FieldValueTransformer fieldValueTransformer;
+
+    @FunctionalInterface
+    public interface CriteriaStrategy {
+        Criteria apply(Criteria criteria, String fieldName, Comparable<?> value);
+    }
+
+    private static final Map<Operator, CriteriaStrategy> MAPPINGS = new HashMap<>();
+
+    static {
+        MAPPINGS.put(Operator.STARTS, (criteria, fieldName, value) -> criteria.where(fieldName).startsWith(value.toString()));
+        MAPPINGS.put(Operator.ENDS, (criteria, fieldName, value) -> criteria.where(fieldName).endsWith(value.toString()));
+        MAPPINGS.put(Operator.CONTAINS, (criteria, fieldName, value) -> criteria.where(fieldName).contains(value.toString()));
+        MAPPINGS.put(Operator.EQUALS, (criteria, fieldName, value) -> criteria.where(fieldName).expression("'" + value.toString() + "'"));
+        MAPPINGS.put(Operator.LT, (criteria, fieldName, value) -> criteria.where(fieldName).lessThan(value));
+        MAPPINGS.put(Operator.LTE, (criteria, fieldName, value) -> criteria.where(fieldName).lessThanEqual(value));
+        MAPPINGS.put(Operator.GT, (criteria, fieldName, value) -> criteria.where(fieldName).greaterThan(value));
+        MAPPINGS.put(Operator.GTE, (criteria, fieldName, value) -> criteria.where(fieldName).greaterThanEqual(value));
+        MAPPINGS.put(Operator.EQ, (criteria, fieldName, value) -> criteria.where(fieldName).is(value));
+        MAPPINGS.put(Operator.IN, (criteria, fieldName, value) -> criteria.where(fieldName).in((List<?>) value));
+        MAPPINGS.put(Operator.BETWEEN, (criteria, fieldName, value) -> {
+            List<?> values = (List<?>) value;
+            return criteria.where(fieldName).greaterThanEqual(values.get(0)).lessThanEqual(values.get(1));
+        });
+    }
+
+    public static void addStrategy(Operator operator, CriteriaStrategy strategy) {
+        MAPPINGS.put(operator, strategy);
+    }
+
+    public static void removeStrategy(Operator operator) {
+        MAPPINGS.remove(operator);
+    }
 
     public ElasticsearchCriteriaExpressionVisitor(final Map<String, String> fieldMap, final FieldValueTransformer fieldValueTransformer) {
         this.fieldMap = fieldMap;
@@ -75,19 +109,17 @@ public class ElasticsearchCriteriaExpressionVisitor implements ExpressionVisitor
     @Override
     public Criteria visitCompoundExpression(final CompoundExpression compoundExpression, final Criteria data) {
         Criteria result = null;
-        switch (compoundExpression.getOperator()) {
-            /* Logical operations.*/
-            case AND:
-                Criteria left = compoundExpression.getLeftOperand().accept(this, null);
-                Criteria right = compoundExpression.getRightOperand().accept(this, null);
-                result = left.and(right);
-                break;
-
-            case OR:
-                left = compoundExpression.getLeftOperand().accept(this, null);
-                right = compoundExpression.getRightOperand().accept(this, null);
-                result = left.or(right);
-                break;
+        Operator operator = compoundExpression.getOperator();
+        if (Operator.AND.equals(operator)) {
+            Criteria left = compoundExpression.getLeftOperand().accept(this, null);
+            Criteria right = compoundExpression.getRightOperand().accept(this, null);
+            result = left.and(right);
+        } else if (Operator.OR.equals(operator)) {
+            Criteria right;
+            Criteria left;
+            left = compoundExpression.getLeftOperand().accept(this, null);
+            right = compoundExpression.getRightOperand().accept(this, null);
+            result = left.or(right);
         }
         return result;
     }
@@ -101,61 +133,18 @@ public class ElasticsearchCriteriaExpressionVisitor implements ExpressionVisitor
      */
     @Override
     public Criteria visitBinaryExpression(final BinaryExpression binaryExpression, final Criteria data) {
-        Criteria criteria = null;
         final String fieldName = mappedFieldName(binaryExpression.getLeftOperand().infix());
         ExpressionValue<? extends Comparable> operandValue = (ExpressionValue<? extends Comparable>) binaryExpression.getRightOperand();
         operandValue = getTransformedValue(operandValue);
+        return applyOperator(binaryExpression, data, fieldName, operandValue.value());
+    }
 
-        switch (binaryExpression.getOperator()) {
-            /* String operations.*/
-            case STARTS:
-                criteria = Criteria.where(fieldName).startsWith(operandValue.value().toString());
-                break;
-
-            case ENDS:
-                criteria = Criteria.where(fieldName).endsWith(operandValue.value().toString());
-                break;
-
-            case CONTAINS:
-                criteria = Criteria.where(fieldName).contains(operandValue.value().toString());
-                break;
-
-            case EQUALS:
-                criteria = Criteria.where(fieldName).expression(QUOTE_CHARACTER + operandValue.value().toString() + QUOTE_CHARACTER);
-                break;
-
-            /* Numeric operations.*/
-            case LT:
-                criteria = Criteria.where(fieldName).lessThan(operandValue.value());
-                break;
-
-            case LTE:
-                criteria = Criteria.where(fieldName).lessThanEqual(operandValue.value());
-                break;
-
-            case EQ:
-                criteria = Criteria.where(fieldName).is(operandValue.value());
-                break;
-
-            case GT:
-                criteria = Criteria.where(fieldName).greaterThan(operandValue.value());
-                break;
-
-            case GTE:
-                criteria = Criteria.where(fieldName).greaterThanEqual(operandValue.value());
-                break;
-
-            case IN:
-                List<Comparable> expressionInValues = (List<Comparable>) operandValue.value();
-                criteria = Criteria.where(fieldName).in(expressionInValues);
-                break;
-
-            case BETWEEN:
-                List<Comparable> expressionBetweenValues = (List<Comparable>) operandValue.value();
-                criteria = Criteria.where(fieldName).greaterThanEqual(expressionBetweenValues.get(0)).lessThanEqual(expressionBetweenValues.get(1));
-                break;
+    public Criteria applyOperator(BinaryExpression binaryExpression, Criteria data, String fieldName, Comparable<?> value) {
+        CriteriaStrategy strategy = MAPPINGS.get(binaryExpression.getOperator());
+        if (strategy == null) {
+            throw new UnsupportedOperationException("Unsupported operator: " + binaryExpression.getOperator());
         }
-        return criteria;
+        return strategy.apply(data, fieldName, value);
     }
 
     /**

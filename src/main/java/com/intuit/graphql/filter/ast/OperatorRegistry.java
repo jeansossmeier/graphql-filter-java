@@ -35,14 +35,14 @@ import static com.intuit.graphql.filter.ast.Operator.OR;
 import static com.intuit.graphql.filter.ast.Operator.STARTS;
 
 /**
- * Class that represents a registry
+ * Class that represents an operator registry
  *
  * @author jeansossmeier
  */
 public class OperatorRegistry {
     private static final OperatorRegistry INSTANCE = new OperatorRegistry();
 
-    public static OperatorRegistry getInstance() {
+    public static OperatorRegistry defaultInstance() {
         return INSTANCE;
     }
 
@@ -61,7 +61,7 @@ public class OperatorRegistry {
     }
 
     public static OperatorRegistry withDefaultOperators() {
-        final OperatorRegistry registry = OperatorRegistry.getInstance();
+        final OperatorRegistry registry = OperatorRegistry.defaultInstance();
 
         // Logical Operators
         registry.registerOperator(AND);

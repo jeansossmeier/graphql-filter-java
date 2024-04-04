@@ -27,23 +27,9 @@ import com.intuit.graphql.filter.client.FieldValueTransformer;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static com.intuit.graphql.filter.ast.Operator.AND;
-import static com.intuit.graphql.filter.ast.Operator.BETWEEN;
-import static com.intuit.graphql.filter.ast.Operator.CONTAINS;
-import static com.intuit.graphql.filter.ast.Operator.ENDS;
-import static com.intuit.graphql.filter.ast.Operator.EQ;
-import static com.intuit.graphql.filter.ast.Operator.EQUALS;
-import static com.intuit.graphql.filter.ast.Operator.GT;
-import static com.intuit.graphql.filter.ast.Operator.GTE;
-import static com.intuit.graphql.filter.ast.Operator.IN;
-import static com.intuit.graphql.filter.ast.Operator.LT;
-import static com.intuit.graphql.filter.ast.Operator.LTE;
-import static com.intuit.graphql.filter.ast.Operator.NOT;
-import static com.intuit.graphql.filter.ast.Operator.OR;
-import static com.intuit.graphql.filter.ast.Operator.STARTS;
 
 /**
  * This class is responsible for traversing
@@ -52,15 +38,56 @@ import static com.intuit.graphql.filter.ast.Operator.STARTS;
  * order marked by parenthesis.
  *
  * @author sjaiswal
+ * @author jeansossmeier
  */
 public class SQLExpressionVisitor implements ExpressionVisitor<String> {
+    private static final Map<Operator, String> MAPPINGS = new HashMap<>();
 
     private Deque<Operator> operatorStack;
     private Map<String, String> fieldMap;
     private Deque<ExpressionField> fieldStack;
     private FieldValueTransformer fieldValueTransformer;
 
-    public SQLExpressionVisitor(Map<String,String> fieldMap, FieldValueTransformer fieldValueTransformer) {
+    static {
+        // Logical operators
+        MAPPINGS.put(Operator.AND, "AND");
+        MAPPINGS.put(Operator.OR, "OR");
+        MAPPINGS.put(Operator.NOT, "NOT");
+
+        // Relational string operators
+        MAPPINGS.put(Operator.EQUALS, "=");
+        MAPPINGS.put(Operator.CONTAINS, "LIKE");
+        MAPPINGS.put(Operator.STARTS, "LIKE");
+        MAPPINGS.put(Operator.ENDS, "LIKE");
+
+        // Relational numeric operators
+        MAPPINGS.put(Operator.LT, "<");
+        MAPPINGS.put(Operator.GT, ">");
+        MAPPINGS.put(Operator.EQ, "=");
+        MAPPINGS.put(Operator.GTE, ">=");
+        MAPPINGS.put(Operator.LTE, "<=");
+
+        // Common operators
+        MAPPINGS.put(Operator.IN, "IN");
+        MAPPINGS.put(Operator.BETWEEN, "BETWEEN");
+    }
+
+    public static String resolveOperator(Operator operator) {
+        return MAPPINGS.getOrDefault(operator, "");
+    }
+
+    public static void addMapping(Operator operator, String sql) {
+        MAPPINGS.put(operator, sql);
+    }
+
+    public static void removeMapping(Operator operator) {
+        MAPPINGS.remove(operator);
+    }
+
+    public SQLExpressionVisitor(
+            Map<String,String> fieldMap,
+            FieldValueTransformer fieldValueTransformer
+    ) {
         this.operatorStack = new ArrayDeque<>();
         this.fieldMap = fieldMap;
         this.fieldStack = new ArrayDeque<>();
@@ -218,38 +245,5 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
             expressionBuilder.append("'").append(value.infix()).append("'");
         }
         return expressionBuilder.toString();
-    }
-
-    private String resolveOperator(Operator operator) {
-        String op = "";
-        /* Logical operators */
-        if (operator.equals(AND) || operator.equals(OR) || operator.equals(NOT)) {
-            op = operator.getName().toUpperCase();
-
-            /* Relational string operators*/
-        } else if (operator.equals(EQUALS)) {
-            op = "=";
-        } else if (operator.equals(CONTAINS) || operator.equals(STARTS) || operator.equals(ENDS)) {
-            op = "LIKE";
-
-            /* Relational numeric operators*/
-        } else if (operator.equals(LT)) {
-            op = "<";
-        } else if (operator.equals(GT)) {
-            op = ">";
-        } else if (operator.equals(EQ)) {
-            op = "=";
-        } else if (operator.equals(GTE)) {
-            op = ">=";
-        } else if (operator.equals(LTE)) {
-            op = "<=";
-
-            /* Common operators */
-        } else if (operator.equals(IN)) {
-            op = "IN";
-        } else if (operator.equals(BETWEEN)) {
-            op = "BETWEEN";
-        }
-        return op;
     }
 }

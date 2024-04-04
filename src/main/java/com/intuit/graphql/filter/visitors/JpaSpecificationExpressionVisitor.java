@@ -17,6 +17,7 @@ package com.intuit.graphql.filter.visitors;
 
 import com.intuit.graphql.filter.ast.BinaryExpression;
 import com.intuit.graphql.filter.ast.CompoundExpression;
+import com.intuit.graphql.filter.ast.Operator;
 import com.intuit.graphql.filter.ast.UnaryExpression;
 import com.intuit.graphql.filter.ast.Expression;
 import com.intuit.graphql.filter.ast.ExpressionField;
@@ -32,6 +33,7 @@ import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -42,12 +44,44 @@ import java.util.Map;
  * order.
  *
  * @author sjaiswal
+ * @author jeansossmeier
  */
 public class JpaSpecificationExpressionVisitor<T> implements ExpressionVisitor<Specification<T>>{
 
     private Map<String, String> fieldMap;
     private Deque<String> fieldStack;
     private FieldValueTransformer fieldValueTransformer;
+
+    @FunctionalInterface
+    public interface PredicateStrategy<T> {
+        Predicate buildPredicate(Root<T> root, CriteriaBuilder criteriaBuilder, Path path, ExpressionValue<?> value);
+    }
+
+    private final Map<Operator, PredicateStrategy<T>> mappings = new HashMap<>();
+
+    public JpaSpecificationExpressionVisitor() {
+        mappings.put(Operator.STARTS, (root, cb, path, value) -> cb.like(path, value.value() + "%"));
+        mappings.put(Operator.ENDS, (root, cb, path, value) -> cb.like(path, "%" + value.value()));
+        mappings.put(Operator.CONTAINS, (root, cb, path, value) -> cb.like(path, "%" + value.value() + "%"));
+        mappings.put(Operator.EQUALS, (root, cb, path, value) -> cb.equal(path, value.value()));
+        mappings.put(Operator.LT, (root, cb, path, value) -> cb.lessThan(path, (Comparable) value.value()));
+        mappings.put(Operator.LTE, (root, cb, path, value) -> cb.lessThanOrEqualTo(path, (Comparable) value.value()));
+        mappings.put(Operator.GT, (root, cb, path, value) -> cb.greaterThan(path, (Comparable) value.value()));
+        mappings.put(Operator.GTE, (root, cb, path, value) -> cb.greaterThanOrEqualTo(path, (Comparable) value.value()));
+        mappings.put(Operator.IN, (root, cb, path, value) -> path.in((List<Comparable>) value.value()));
+        mappings.put(Operator.BETWEEN, (root, cb, path, value) -> {
+            List<Comparable> values = (List<Comparable>) value.value();
+            return cb.between(path, values.get(0), values.get(1));
+        });
+    }
+
+    public Predicate resolvePredicate(Operator operator, Root<T> root, CriteriaBuilder cb, Path<String> path, ExpressionValue<?> value) {
+        PredicateStrategy<T> strategy = mappings.get(operator);
+        if (strategy == null) {
+            throw new UnsupportedOperationException("Unsupported operator: " + operator);
+        }
+        return strategy.buildPredicate(root, cb, path, value);
+    }
 
     public JpaSpecificationExpressionVisitor(Map<String, String> fieldMap, FieldValueTransformer fieldValueTransformer) {
         this.fieldMap = fieldMap;
@@ -83,20 +117,17 @@ public class JpaSpecificationExpressionVisitor<T> implements ExpressionVisitor<S
     @Override
     public Specification<T> visitCompoundExpression(CompoundExpression compoundExpression, Specification<T> data) {
         Specification<T> result = null;
-        switch (compoundExpression.getOperator()) {
-            /* Logical operations.*/
-            case AND:
-                Specification<T> left = compoundExpression.getLeftOperand().accept(this, null);
-                Specification<T> right = compoundExpression.getRightOperand().accept(this, null);
-                result = Specification.where(left).and(right);
-
-                break;
-
-            case OR:
-                left = compoundExpression.getLeftOperand().accept(this, null);
-                right = compoundExpression.getRightOperand().accept(this, null);
-                result = Specification.where(left).or(right);
-                break;
+        /* Logical operations.*/
+        if (Operator.AND.equals(compoundExpression.getOperator())) {
+            Specification<T> left = compoundExpression.getLeftOperand().accept(this, null);
+            Specification<T> right = compoundExpression.getRightOperand().accept(this, null);
+            result = Specification.where(left).and(right);
+        } else if (Operator.OR.equals(compoundExpression.getOperator())) {
+            Specification<T> right;
+            Specification<T> left;
+            left = compoundExpression.getLeftOperand().accept(this, null);
+            right = compoundExpression.getRightOperand().accept(this, null);
+            result = Specification.where(left).or(right);
         }
         return result;
     }
@@ -113,73 +144,12 @@ public class JpaSpecificationExpressionVisitor<T> implements ExpressionVisitor<S
      */
     @Override
     public Specification<T> visitBinaryExpression(BinaryExpression binaryExpression, Specification<T> data) {
-
-        return new Specification<T>() {
-            @Override
-            public Predicate toPredicate(Root<T> root, CriteriaQuery<?> criteriaQuery, CriteriaBuilder
-                                                                            criteriaBuilder) {
-
-                ExpressionValue<? extends Comparable> operandValue = (ExpressionValue<? extends Comparable>)binaryExpression.getRightOperand();
-                Predicate predicate = null;
-                String fieldName = mappedFieldName(binaryExpression.getLeftOperand().infix());
-                operandValue = getTransformedValue(operandValue);
-                Path path = root.get(fieldName);
-
-                switch (binaryExpression.getOperator()) {
-                    /* String operations.*/
-                    case STARTS:
-                        predicate = criteriaBuilder.like(path, operandValue.value() + "%");
-                        break;
-
-                    case ENDS:
-                        predicate = criteriaBuilder.like(path, "%" + operandValue.value());
-                        break;
-
-                    case CONTAINS:
-                        predicate = criteriaBuilder.like(path, "%" + operandValue.value() + "%");
-                        break;
-
-                    case EQUALS:
-                        predicate = criteriaBuilder.equal(path,  operandValue.value());
-                        break;
-
-                    /* Numeric operations.*/
-                    case LT:
-                        predicate = criteriaBuilder.lessThan(path, operandValue.value());
-                        break;
-
-                    case LTE:
-                        predicate = criteriaBuilder.lessThanOrEqualTo(path, operandValue.value());
-                        break;
-
-                    case EQ:
-                        if (operandValue.value() == null) {
-                            predicate = criteriaBuilder.isNull(path);
-                        } else {
-                            predicate = criteriaBuilder.equal(path, operandValue.value());
-                        }
-                        break;
-
-                    case GT:
-                        predicate = criteriaBuilder.greaterThan(path, operandValue.value());
-                        break;
-
-                    case GTE:
-                        predicate = criteriaBuilder.greaterThanOrEqualTo(path, operandValue.value());
-                        break;
-
-                    case IN:
-                        List<Comparable> expressionInValues = (List<Comparable>)operandValue.value();
-                        predicate = criteriaBuilder.in(path).value(expressionInValues);
-                        break;
-
-                    case BETWEEN:
-                        List<Comparable> expressionBetweenValues = (List<Comparable>)operandValue.value();
-                        predicate = criteriaBuilder.between(path,expressionBetweenValues.get(0),expressionBetweenValues.get(1));
-                        break;
-                }
-                return predicate;
-            }
+        return (root, criteriaQuery, criteriaBuilder) -> {
+            ExpressionValue<? extends Comparable> operandValue = (ExpressionValue<? extends Comparable>)binaryExpression.getRightOperand();
+            String fieldName = mappedFieldName(binaryExpression.getLeftOperand().infix());
+            operandValue = getTransformedValue(operandValue);
+            Path path = root.get(fieldName);
+            return resolvePredicate(binaryExpression.getOperator(), root, criteriaBuilder, path, operandValue);
         };
     }
 

@@ -27,11 +27,12 @@ public class Operator {
     private String type;
     private Kind kind;
 
-    public Operator(String name, String type, Kind kind) {
+    public Operator(String name, Kind kind, String... type) {
         this.name = name;
-        this.type = type;
         this.kind = kind;
+        this.type = String.join("|", type);
     }
+
 
     public String getName() { return name; }
     public String getType() { return type; }
@@ -41,19 +42,23 @@ public class Operator {
         COMPOUND, BINARY, UNARY
     }
 
-    public static final Operator AND = new Operator("and", "Logical", Operator.Kind.COMPOUND);
+    public static final String TYPE_LOGICAL = "Logical";
+    public static final String TYPE_STRING = "String";
+    public static final String TYPE_NUMERIC = "Numeric";
+    public static final String TYPE_DATETIME = "DateTime";
 
-    public static final Operator OR = new Operator("or", "Logical", Operator.Kind.COMPOUND);
-    public static final Operator NOT = new Operator("not", "Logical", Operator.Kind.UNARY);
-    public static final Operator EQUALS = new Operator("equals", "String", Operator.Kind.BINARY);
-    public static final Operator CONTAINS = new Operator("contains", "String", Operator.Kind.BINARY);
-    public static final Operator STARTS = new Operator("starts", "String", Operator.Kind.BINARY);
-    public static final Operator ENDS = new Operator("ends", "String", Operator.Kind.BINARY);
-    public static final Operator EQ = new Operator("eq", "Numeric", Operator.Kind.BINARY);
-    public static final Operator GT = new Operator("gt", "Numeric", Operator.Kind.BINARY);
-    public static final Operator GTE = new Operator("gte", "Numeric", Operator.Kind.BINARY);
-    public static final Operator LT = new Operator("lt", "Numeric", Operator.Kind.BINARY);
-    public static final Operator LTE = new Operator("lte", "Numeric", Operator.Kind.BINARY);
-    public static final Operator IN = new Operator("in", "String|Numeric", Operator.Kind.BINARY);
-    public static final Operator BETWEEN = new Operator("between", "DateTime|Numeric", Operator.Kind.BINARY);
+    public static final Operator AND = new Operator("and", Operator.Kind.COMPOUND, TYPE_LOGICAL);
+    public static final Operator OR = new Operator("or", Operator.Kind.COMPOUND, TYPE_LOGICAL);
+    public static final Operator NOT = new Operator("not", Operator.Kind.UNARY, TYPE_LOGICAL);
+    public static final Operator EQUALS = new Operator("equals", Operator.Kind.BINARY, TYPE_STRING);
+    public static final Operator CONTAINS = new Operator("contains", Operator.Kind.BINARY, TYPE_STRING);
+    public static final Operator STARTS = new Operator("starts", Operator.Kind.BINARY, TYPE_STRING);
+    public static final Operator ENDS = new Operator("ends", Operator.Kind.BINARY, TYPE_STRING);
+    public static final Operator EQ = new Operator("eq", Operator.Kind.BINARY, TYPE_NUMERIC);
+    public static final Operator GT = new Operator("gt", Operator.Kind.BINARY, TYPE_NUMERIC);
+    public static final Operator GTE = new Operator("gte", Operator.Kind.BINARY, TYPE_NUMERIC);
+    public static final Operator LT = new Operator("lt", Operator.Kind.BINARY, TYPE_NUMERIC);
+    public static final Operator LTE = new Operator("lte", Operator.Kind.BINARY, TYPE_NUMERIC);
+    public static final Operator IN = new Operator("in", Operator.Kind.BINARY, TYPE_STRING, TYPE_NUMERIC);
+    public static final Operator BETWEEN = new Operator("between", Operator.Kind.BINARY, TYPE_DATETIME, TYPE_NUMERIC);
 }
