@@ -37,21 +37,20 @@ public class ExpressionValue<V> implements Expression {
      */
     @Override
     public String infix() {
-        StringBuilder infix = new StringBuilder("");
-        String result = null;
-        if (value != null) {
-            if (value instanceof Iterable) {
-                Iterable<V> vals = (Iterable<V>) value;
-                for (V val : vals) {
-                    infix.append(value.toString()).append(",");
-                }
-                result = infix.toString() == "" ? "" : infix.substring(0, infix.length()-1);
-            } else {
-                infix.append(value);
-                result = infix.toString();
-            }
+        final StringBuilder infix = new StringBuilder();
+        if (value == null) {
+            return null;
         }
-        return result;
+
+        if (value instanceof Iterable) {
+            for (V val : (Iterable<V>) value) {
+                infix.append(val.toString()).append(",");
+            }
+            return infix.toString() == "" ? "" : infix.substring(0, infix.length()-1);
+        } else {
+            infix.append(value);
+            return infix.toString();
+        }
     }
 
     /**
