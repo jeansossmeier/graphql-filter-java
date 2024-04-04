@@ -15,17 +15,43 @@
  */
 package com.intuit.graphql.filter.client;
 
-import com.intuit.graphql.filter.ast.*;
+import com.intuit.graphql.filter.ast.BinaryExpression;
+import com.intuit.graphql.filter.ast.CompoundExpression;
+import com.intuit.graphql.filter.ast.Expression;
+import com.intuit.graphql.filter.ast.ExpressionField;
+import com.intuit.graphql.filter.ast.ExpressionValue;
+import com.intuit.graphql.filter.ast.Operator;
+import com.intuit.graphql.filter.ast.OperatorRegistry;
+import com.intuit.graphql.filter.ast.UnaryExpression;
 
-import java.time.*;
-import java.util.*;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneId;
+import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Deque;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * GraphQL Filter Expression Parser.
  *
  * @author sjaiswal
+ * @author jeansossmeier
  */
-class FilterExpressionParser {
+public class FilterExpressionParser {
+    private final OperatorRegistry operatorRegistry;
+
+    public FilterExpressionParser() {
+        this.operatorRegistry = OperatorRegistry.withDefaultOperators();
+    }
+
+    public FilterExpressionParser(OperatorRegistry operatorRegistry) {
+        this.operatorRegistry = operatorRegistry;
+    }
 
     /**
      * Parses the given graphql filter expression AST.
@@ -46,7 +72,7 @@ class FilterExpressionParser {
         for (Map.Entry entry : entries) {
             String key = entry.getKey().toString();
             if (isOperator(key)) {
-                String kind = Operator.getOperatorKind(key);
+                String kind = getOperatorKind(key);
                 switch (kind) {
 
                     /* Case to handle the compound expression.*/
@@ -57,7 +83,7 @@ class FilterExpressionParser {
                             Expression left = expressionStack.peek();
                             if (validateExpression(right) && validateExpression(left)) {
                                 left = expressionStack.pop();
-                                Expression newExp = new CompoundExpression(left, Operator.getOperator(key), right);
+                                Expression newExp = new CompoundExpression(left, getOperator(key), right);
                                 expressionStack.push(newExp);
                             } else {
                                 expressionStack.push(right);
@@ -69,7 +95,7 @@ class FilterExpressionParser {
                     /* Case to handle the binary expression.*/
                     case "BINARY":
                         BinaryExpression binaryExpression = new BinaryExpression();
-                        binaryExpression.setOperator(Operator.getOperator(key));
+                        binaryExpression.setOperator(getOperator(key));
                         if (entry.getValue() instanceof Collection) {
                             List<Comparable> expressionValues = new ArrayList<>();
                             List<Comparable> operandValues = (List<Comparable>) entry.getValue();
@@ -87,7 +113,7 @@ class FilterExpressionParser {
 
                     case "UNARY":
                         Expression operand = createExpressionTree((Map)entry.getValue());
-                        expression = new UnaryExpression(operand,Operator.getOperator(key), null);
+                        expression = new UnaryExpression(operand, getOperator(key), null);
                         break;
                 }
             } else {
@@ -102,10 +128,18 @@ class FilterExpressionParser {
         return expression;
     }
 
+    private Operator getOperator(String key) {
+        return operatorRegistry.getOperator(key);
+    }
+
+    private String getOperatorKind(String key) {
+        return getOperator(key).getKind().name();
+    }
+
     private boolean isOperator(String key) {
         Operator operator = null;
         try {
-            operator = Operator.getOperator(key);
+            operator = operatorRegistry.getOperator(key);
         } catch (Exception ex) {
 
         }

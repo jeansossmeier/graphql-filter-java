@@ -28,6 +28,7 @@ import java.util.Map;
  * of specified format.
  *
  * @author sjaiswal
+ * @author jeansossmeier
  */
 public class FilterExpression {
 
@@ -48,12 +49,12 @@ public class FilterExpression {
      * instance of FilterExpression class.
      */
     public static class FilterExpressionBuilder {
+        private static final String FILTER_ARG = "filter";
 
         private Field field;
         private Map<String,String> fieldMap;
         private Expression expressionAst;
         private Map args;
-        private final String FILTER_ARG = "filter";
         private FieldValueTransformer fieldValueTransformer;
 
         private FilterExpressionBuilder () {
@@ -93,8 +94,8 @@ public class FilterExpression {
                     expressionAst = expressionParser.parseFilterExpression((Map) filter);
                 }
             }
-            FilterExpression expression = new FilterExpression(this);
-            return expression;
+
+            return new FilterExpression(this);
         }
     }
 

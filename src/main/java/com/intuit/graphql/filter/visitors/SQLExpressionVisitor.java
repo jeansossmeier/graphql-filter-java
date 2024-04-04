@@ -27,6 +27,7 @@ import com.intuit.graphql.filter.client.FieldValueTransformer;
 
 import java.util.ArrayDeque;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -37,15 +38,56 @@ import java.util.Map;
  * order marked by parenthesis.
  *
  * @author sjaiswal
+ * @author jeansossmeier
  */
 public class SQLExpressionVisitor implements ExpressionVisitor<String> {
+    private static final Map<Operator, String> MAPPINGS = new HashMap<>();
 
     private Deque<Operator> operatorStack;
     private Map<String, String> fieldMap;
     private Deque<ExpressionField> fieldStack;
     private FieldValueTransformer fieldValueTransformer;
 
-    public SQLExpressionVisitor(Map<String,String> fieldMap, FieldValueTransformer fieldValueTransformer) {
+    static {
+        // Logical operators
+        MAPPINGS.put(Operator.AND, "AND");
+        MAPPINGS.put(Operator.OR, "OR");
+        MAPPINGS.put(Operator.NOT, "NOT");
+
+        // Relational string operators
+        MAPPINGS.put(Operator.EQUALS, "=");
+        MAPPINGS.put(Operator.CONTAINS, "LIKE");
+        MAPPINGS.put(Operator.STARTS, "LIKE");
+        MAPPINGS.put(Operator.ENDS, "LIKE");
+
+        // Relational numeric operators
+        MAPPINGS.put(Operator.LT, "<");
+        MAPPINGS.put(Operator.GT, ">");
+        MAPPINGS.put(Operator.EQ, "=");
+        MAPPINGS.put(Operator.GTE, ">=");
+        MAPPINGS.put(Operator.LTE, "<=");
+
+        // Common operators
+        MAPPINGS.put(Operator.IN, "IN");
+        MAPPINGS.put(Operator.BETWEEN, "BETWEEN");
+    }
+
+    public static String resolveOperator(Operator operator) {
+        return MAPPINGS.getOrDefault(operator, "");
+    }
+
+    public static void addMapping(Operator operator, String sql) {
+        MAPPINGS.put(operator, sql);
+    }
+
+    public static void removeMapping(Operator operator) {
+        MAPPINGS.remove(operator);
+    }
+
+    public SQLExpressionVisitor(
+            Map<String,String> fieldMap,
+            FieldValueTransformer fieldValueTransformer
+    ) {
         this.operatorStack = new ArrayDeque<>();
         this.fieldMap = fieldMap;
         this.fieldStack = new ArrayDeque<>();
@@ -203,53 +245,5 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
             expressionBuilder.append("'").append(value.infix()).append("'");
         }
         return expressionBuilder.toString();
-    }
-
-    private String resolveOperator(Operator operator) {
-        String op = "";
-        switch (operator) {
-            /* Logical operators */
-            case AND:
-            case OR:
-            case NOT:
-                op = operator.getName().toUpperCase();
-                break;
-
-            /* Relational string operators*/
-            case EQUALS:
-                op = "=";
-                break;
-            case CONTAINS:
-            case STARTS:
-            case ENDS:
-                op = "LIKE";
-                break;
-
-            /* Relational numeric operators*/
-            case LT:
-                op = "<";
-                break;
-            case GT:
-                op = ">";
-                break;
-            case EQ:
-                op = "=";
-                break;
-            case GTE:
-                op = ">=";
-                break;
-            case LTE:
-                op = "<=";
-                break;
-
-            /* Common operators */
-            case IN:
-                op = "IN";
-                break;
-            case BETWEEN:
-                op = "BETWEEN";
-                break;
-        }
-        return op;
     }
 }

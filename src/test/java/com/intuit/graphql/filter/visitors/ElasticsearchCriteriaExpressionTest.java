@@ -65,7 +65,7 @@ public class ElasticsearchCriteriaExpressionTest extends BaseFilterExpressionTes
 
         final Criteria actualCriteria = getEmployeeDataFetcher().getElasticsearchCriteria();
         final Criteria expectedCriteria = Criteria.where("firstName").contains("Saurabh")
-                .or(Criteria.where("lastName").expression("\"Jaiswal\""));
+                .or(Criteria.where("lastName").expression("'Jaiswal'"));
 
         Assert.assertEquals(expectedCriteria.toString(), actualCriteria.toString());
     }
@@ -76,7 +76,7 @@ public class ElasticsearchCriteriaExpressionTest extends BaseFilterExpressionTes
 
         final Criteria actualCriteria = getEmployeeDataFetcher().getElasticsearchCriteria();
         final Criteria expectedCriteria = Criteria.where("firstName").contains("Saurabh")
-                .and(Criteria.where("lastName").expression("\"Jaiswal\""));
+                .and(Criteria.where("lastName").expression("'Jaiswal'"));
 
         Assert.assertEquals(expectedCriteria.toString(), actualCriteria.toString());
     }
@@ -87,7 +87,7 @@ public class ElasticsearchCriteriaExpressionTest extends BaseFilterExpressionTes
 
         final Criteria actualCriteria = getEmployeeDataFetcher().getElasticsearchCriteria();
         final Criteria expectedCriteria = Criteria.where("firstName").contains("Saurabh")
-                .or(Criteria.where("lastName").expression("\"Jaiswal\"")
+                .or(Criteria.where("lastName").expression("'Jaiswal'")
                         .and(Criteria.where("age").greaterThanEqual(25)));
 
         Assert.assertEquals(expectedCriteria.toString(), actualCriteria.toString());
@@ -99,7 +99,7 @@ public class ElasticsearchCriteriaExpressionTest extends BaseFilterExpressionTes
 
         final Criteria actualCriteria = getEmployeeDataFetcher().getElasticsearchCriteria();
         final Criteria expectedCriteria = Criteria.where("firstName").contains("Saurabh")
-                .and(Criteria.where("lastName").expression("\"Jaiswal\"")
+                .and(Criteria.where("lastName").expression("'Jaiswal'")
                         .or(Criteria.where("age").greaterThanEqual(25)));
 
         Assert.assertEquals(expectedCriteria.toString(), actualCriteria.toString());
@@ -111,8 +111,8 @@ public class ElasticsearchCriteriaExpressionTest extends BaseFilterExpressionTes
 
         final Criteria actualCriteria = getEmployeeDataFetcher().getElasticsearchCriteria();
         final Criteria expectedCriteria = Criteria.where("firstName").contains("Saurabh")
-                .or(Criteria.where("lastName").expression("\"Jaiswal\""))
-                .or(Criteria.where("firstName").expression("\"Vinod\"")
+                .or(Criteria.where("lastName").expression("'Jaiswal'"))
+                .or(Criteria.where("firstName").expression("'Vinod'")
                         .and(Criteria.where("age").greaterThanEqual(30)));
 
         Assert.assertEquals(expectedCriteria.toString(), actualCriteria.toString());
@@ -124,8 +124,8 @@ public class ElasticsearchCriteriaExpressionTest extends BaseFilterExpressionTes
 
         final Criteria actualCriteria = getEmployeeDataFetcher().getElasticsearchCriteria();
         final Criteria expectedCriteria = Criteria.where("firstName").contains("Saurabh")
-                .and(Criteria.where("lastName").expression("\"Jaiswal\""))
-                .and(Criteria.where("firstName").expression("\"Vinod\"")
+                .and(Criteria.where("lastName").expression("'Jaiswal'"))
+                .and(Criteria.where("firstName").expression("'Vinod'")
                         .or(Criteria.where("age").greaterThanEqual(30)));
 
         Assert.assertEquals(expectedCriteria.toString(), actualCriteria.toString());
