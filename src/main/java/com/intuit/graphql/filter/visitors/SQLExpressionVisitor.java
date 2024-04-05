@@ -26,11 +26,32 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
     private static final String DOUBLE_QUOTE = "\"";
     private static final String ESCAPED_DOUBLE_QUOTE = "\\\\\\\"";
     private static final String DEFAULT_METADATA_PREFIX = "params@";
+    private static final Map<Operator, String> DEFAULT_MAPPINGS = new HashMap<>();
 
-    private static final Map<Operator, String> MAPPINGS = new HashMap<>();
+    static {
+        // Logical operators
+        DEFAULT_MAPPINGS.put(Operator.AND, "AND");
+        DEFAULT_MAPPINGS.put(Operator.OR, "OR");
+        DEFAULT_MAPPINGS.put(Operator.NOT, "NOT");
 
-    private boolean generateWherePrefix = true;
-    private String metadataPrefix = DEFAULT_METADATA_PREFIX;
+        // Relational string operators
+        DEFAULT_MAPPINGS.put(Operator.EQUALS, "=");
+        DEFAULT_MAPPINGS.put(Operator.CONTAINS, "LIKE");
+        DEFAULT_MAPPINGS.put(Operator.STARTS, "LIKE");
+        DEFAULT_MAPPINGS.put(Operator.ENDS, "LIKE");
+
+        // Relational numeric operators
+        DEFAULT_MAPPINGS.put(Operator.LT, "<");
+        DEFAULT_MAPPINGS.put(Operator.GT, ">");
+        DEFAULT_MAPPINGS.put(Operator.EQ, "=");
+        DEFAULT_MAPPINGS.put(Operator.GTE, ">=");
+        DEFAULT_MAPPINGS.put(Operator.LTE, "<=");
+
+        // Common operators
+        DEFAULT_MAPPINGS.put(Operator.IN, "IN");
+        DEFAULT_MAPPINGS.put(Operator.BETWEEN, "BETWEEN");
+    }
+
 
     private final Deque<Operator> operatorStack;
     private final Deque<ExpressionField> fieldStack;
@@ -38,49 +59,18 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
     private FieldValueTransformer fieldValueTransformer;
     private SQLExpressionValueVisitor expressionValueVisitor;
     private CustomExpressionResolver customExpressionResolver = (fieldName, operator) -> null;
+    private Map<Operator, String> mappings;
     private Map<String, List<String>> metadata;
 
-    static {
-        // Logical operators
-        MAPPINGS.put(Operator.AND, "AND");
-        MAPPINGS.put(Operator.OR, "OR");
-        MAPPINGS.put(Operator.NOT, "NOT");
-
-        // Relational string operators
-        MAPPINGS.put(Operator.EQUALS, "=");
-        MAPPINGS.put(Operator.CONTAINS, "LIKE");
-        MAPPINGS.put(Operator.STARTS, "LIKE");
-        MAPPINGS.put(Operator.ENDS, "LIKE");
-
-        // Relational numeric operators
-        MAPPINGS.put(Operator.LT, "<");
-        MAPPINGS.put(Operator.GT, ">");
-        MAPPINGS.put(Operator.EQ, "=");
-        MAPPINGS.put(Operator.GTE, ">=");
-        MAPPINGS.put(Operator.LTE, "<=");
-
-        // Common operators
-        MAPPINGS.put(Operator.IN, "IN");
-        MAPPINGS.put(Operator.BETWEEN, "BETWEEN");
-    }
-
-    public static String resolveOperator(Operator operator) {
-        return MAPPINGS.getOrDefault(operator, "");
-    }
-
-    public static void addMapping(Operator operator, String sql) {
-        MAPPINGS.put(operator, sql);
-    }
-
-    public static void removeMapping(Operator operator) {
-        MAPPINGS.remove(operator);
-    }
+    private boolean generateWherePrefix = true;
+    private String metadataPrefix = DEFAULT_METADATA_PREFIX;
 
     public SQLExpressionVisitor(
             final Map<String, String> fieldMap,
             final FieldValueTransformer fieldValueTransformer) {
         this.operatorStack = new ArrayDeque<>();
         this.fieldStack = new ArrayDeque<>();
+        this.mappings = new HashMap<>(DEFAULT_MAPPINGS);
         this.metadata = new HashMap<>();
         this.fieldMap = fieldMap;
         this.fieldValueTransformer = fieldValueTransformer;
@@ -261,11 +251,6 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
         return String.format("(%s %s)", data, customExpression);
     }
 
-    private String normalizeString(final String target) {
-        return Normalizer.normalize(target, Normalizer.Form.NFC)
-                .replace(RIGHT_SINGLE_QUOTATION_MARK, APOSTROPHE);
-    }
-
     private void collectMetadata(final String metaDataType, final String[] filterValues) {
         final List<String> filterValueList = new ArrayList<>();
         for (String filterValue : filterValues) {
@@ -279,6 +264,27 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
                             .toString());
         }
         metadata.put(metadataPrefix + metaDataType, filterValueList);
+    }
+
+    public String resolveOperator(Operator operator) {
+        return mappings.getOrDefault(operator, "");
+    }
+
+    public void addMapping(Operator operator, String sql) {
+        mappings.put(operator, sql);
+    }
+
+    public void removeMapping(Operator operator) {
+        mappings.remove(operator);
+    }
+
+    public Map<Operator, String> getMappings() {
+        return mappings;
+    }
+    
+    private String normalizeString(final String target) {
+        return Normalizer.normalize(target, Normalizer.Form.NFC)
+                .replace(RIGHT_SINGLE_QUOTATION_MARK, APOSTROPHE);
     }
 
     public boolean isGenerateWherePrefix() {
