@@ -26,7 +26,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
     private static final char APOSTROPHE = '\'';
     private static final String DOUBLE_QUOTE = "\"";
     private static final String ESCAPED_DOUBLE_QUOTE = "\\\\\\\"";
-    private static final String DEFAULT_METADATA_PREFIX = "params@";
+    private static final String DEFAULT_METADATA_PREFIX = "metadata@";
     private static final Map<Operator, String> DEFAULT_MAPPINGS = new HashMap<>();
 
     static {
