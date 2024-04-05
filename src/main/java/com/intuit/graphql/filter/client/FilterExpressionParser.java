@@ -37,12 +37,16 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * GraphQL Filter Expression Parser.
+ * Parses the given GraphQL filter expression Abstract Syntax Tree (AST)
  *
  * @author sjaiswal
  * @author jeansossmeier
  */
 public class FilterExpressionParser {
+    private static final String KIND_COMPOUND = Operator.Kind.COMPOUND.name();
+    private static final String KIND_BINARY = Operator.Kind.BINARY.name();
+    private static final String KIND_UNARY = Operator.Kind.UNARY.name();
+
     private final OperatorRegistry operatorRegistry;
 
     public FilterExpressionParser() {
@@ -53,11 +57,6 @@ public class FilterExpressionParser {
         this.operatorRegistry = operatorRegistry;
     }
 
-    /**
-     * Parses the given graphql filter expression AST.
-     * @param filterArgs
-     * @return
-     */
     public Expression parseFilterExpression(Map filterArgs) {
         return createExpressionTree(filterArgs);
     }
@@ -66,66 +65,88 @@ public class FilterExpressionParser {
         if (filterMap == null || filterMap.isEmpty() || filterMap.size() > 1) {
             return null;
         }
-        Deque<Expression> expressionStack = new ArrayDeque<>();
+
+        final Deque<Expression> expressionStack = new ArrayDeque<>();
+        final Set<Map.Entry> entries = filterMap.entrySet();
+
         Expression expression = null;
-        Set<Map.Entry> entries =  filterMap.entrySet();
         for (Map.Entry entry : entries) {
             String key = entry.getKey().toString();
             if (isOperator(key)) {
-                String kind = getOperatorKind(key);
-                switch (kind) {
-
-                    /* Case to handle the compound expression.*/
-                    case "COMPOUND":
-                        List values = (List)entry.getValue();
-                        for (Object o : values) {
-                            Expression right = createExpressionTree((Map)o);
-                            Expression left = expressionStack.peek();
-                            if (validateExpression(right) && validateExpression(left)) {
-                                left = expressionStack.pop();
-                                Expression newExp = new CompoundExpression(left, getOperator(key), right);
-                                expressionStack.push(newExp);
-                            } else {
-                                expressionStack.push(right);
-                            }
-                        }
-                        expression = expressionStack.pop();
-                        break;
-
-                    /* Case to handle the binary expression.*/
-                    case "BINARY":
-                        BinaryExpression binaryExpression = new BinaryExpression();
-                        binaryExpression.setOperator(getOperator(key));
-                        if (entry.getValue() instanceof Collection) {
-                            List<Comparable> expressionValues = new ArrayList<>();
-                            List<Comparable> operandValues = (List<Comparable>) entry.getValue();
-                            for (Comparable value : operandValues) {
-                                expressionValues.add(convertIfDate(value));
-                            }
-                            ExpressionValue<List> expressionValue = new ExpressionValue(expressionValues);
-                            binaryExpression.setRightOperand(expressionValue);
-                        } else {
-                            ExpressionValue<Comparable> expressionValue = new ExpressionValue<>(convertIfDate((Comparable) entry.getValue()));
-                            binaryExpression.setRightOperand(expressionValue);
-                        }
-                        expression = binaryExpression;
-                        break;
-
-                    case "UNARY":
-                        Expression operand = createExpressionTree((Map)entry.getValue());
-                        expression = new UnaryExpression(operand, getOperator(key), null);
-                        break;
-                }
+                expression = handleExpression(entry, expressionStack, expression);
             } else {
-                /* Case to handle the Field expression.*/
-                ExpressionField leftOperand = new ExpressionField(entry.getKey().toString());
-                BinaryExpression binaryExpression = (BinaryExpression) createExpressionTree((Map)entry.getValue());
-                binaryExpression.setLeftOperand(leftOperand);
-                expression = binaryExpression;
+                expression = handleFieldExpression(entry, key);
             }
         }
 
         return expression;
+    }
+
+    private Expression handleExpression(
+            Map.Entry entry, Deque<Expression> expressionStack, Expression expression) {
+
+        final String key = entry.getKey().toString();
+        final String kind = getOperatorKind(key);
+        if (KIND_COMPOUND.equals(kind)) {
+            return handleCompound(expressionStack, entry, key);
+        } else if (KIND_BINARY.equals(kind)) {
+            return handleBinary(entry, key);
+        } else if (KIND_UNARY.equals(kind)) {
+            return handleUnary(entry, key);
+        }
+
+        return expression;
+    }
+
+    private Expression handleFieldExpression(Map.Entry entry, final String key) {
+        final ExpressionField leftOperand = new ExpressionField(entry.getKey().toString());
+        final BinaryExpression binaryExpression =
+                (entry.getValue() instanceof Map)
+                        ? (BinaryExpression)
+                        createExpressionTree((Map) entry.getValue())
+                        : (BinaryExpression) handleBinary(entry, Operator.IN.getName());
+
+        binaryExpression.setLeftOperand(leftOperand);
+        return binaryExpression;
+    }
+
+    private Expression handleUnary(Map.Entry entry, String key) {
+        final Expression operand = createExpressionTree((Map) entry.getValue());
+        return new UnaryExpression(operand, getOperator(key), null);
+    }
+
+    private Expression handleBinary(Map.Entry entry, String key) {
+        final BinaryExpression binaryExpression = new BinaryExpression();
+        binaryExpression.setOperator(getOperator(key));
+        if (entry.getValue() instanceof Collection) {
+            final List<Comparable> expressionValues = new ArrayList<>();
+            for (Comparable value : (List<Comparable>) entry.getValue()) {
+                expressionValues.add(convertIfDate(value));
+            }
+            binaryExpression.setRightOperand(new ExpressionValue(expressionValues));
+        } else {
+            binaryExpression.setRightOperand(new ExpressionValue<>(convertIfDate((Comparable) entry.getValue())));
+        }
+        return binaryExpression;
+    }
+
+    private Expression handleCompound(
+            Deque<Expression> expressionStack, Map.Entry entry, String key) {
+
+        final List values = (List) entry.getValue();
+        for (Object object : values) {
+            Expression right = createExpressionTree((Map) object);
+            Expression left = expressionStack.peek();
+            if (validateExpression(right) && validateExpression(left)) {
+                left = expressionStack.pop();
+                expressionStack.push(
+                        new CompoundExpression(left, getOperator(key), right));
+            } else {
+                expressionStack.push(right);
+            }
+        }
+
+        return expressionStack.pop();
     }
 
     private Operator getOperator(String key) {
@@ -137,50 +158,39 @@ public class FilterExpressionParser {
     }
 
     private boolean isOperator(String key) {
-        Operator operator = null;
         try {
-            operator = operatorRegistry.getOperator(key);
-        } catch (Exception ex) {
-
+            return operatorRegistry.getOperator(key) != null;
+        } catch (IllegalArgumentException ex) {
+            return false;
         }
-        return operator == null ? false : true;
     }
-
     private Comparable convertIfDate(Comparable value) {
         if (value == null) {
             return null;
         }
+
         if (value instanceof LocalDate) {
-            LocalDate localDate = (LocalDate) value;
-            value = java.util.Date.from(localDate.atStartOfDay()
-                    .atZone(ZoneId.systemDefault())
-                    .toInstant());
+            final LocalDate localDate = (LocalDate) value;
+            return localDate.atStartOfDay().atZone(ZoneId.systemDefault()).toInstant();
         } else if (value instanceof LocalDateTime) {
-            LocalDateTime localDateTime = (LocalDateTime) value;
-            value = java.util.Date
-                    .from(localDateTime.atZone(ZoneId.systemDefault())
-                            .toInstant());
+            final LocalDateTime localDateTime = (LocalDateTime) value;
+            return localDateTime.atZone(ZoneId.systemDefault()).toInstant();
         } else if (value instanceof OffsetDateTime) {
-            OffsetDateTime offsetDateTime = (OffsetDateTime) value;
-            value = java.util.Date
-                    .from(offsetDateTime.toInstant());
+            final OffsetDateTime offsetDateTime = (OffsetDateTime) value;
+            return offsetDateTime.toInstant();
         }
+
         return value;
     }
 
-    /**
-     * Validates if the given expression is
-     * instance of Binary or Compound expression.
-     * @param expression
-     * @return
-     */
     private boolean validateExpression(Expression expression) {
-        if (expression != null && (expression instanceof BinaryExpression
-                || expression instanceof CompoundExpression
-                || expression instanceof UnaryExpression)) {
-            return true;
+        if (expression == null) {
+            return false;
         }
-        return false;
+
+        return expression instanceof BinaryExpression
+                || expression instanceof CompoundExpression
+                || expression instanceof UnaryExpression;
     }
 
 }
