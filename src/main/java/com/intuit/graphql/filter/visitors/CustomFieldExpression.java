@@ -13,9 +13,21 @@ public interface CustomFieldExpression {
             String queryString,
             String resolvedOperator);
 
-    List<String> getFieldNames();
+    default List<String> getIncludedFieldNames() {
+        return List.of();
+    }
 
-    List<Operator> getOperators();
+    default List<Operator> getIncludedOperators() {
+        return List.of();
+    }
+
+    default List<String> getExcludedFieldNames() {
+        return List.of();
+    }
+
+    default List<Operator> getExcludedOperators()  {
+        return List.of();
+    }
 
     default LogicalOperator getEnclosingLogicalOperator() {
         return LogicalOperator.OR;
