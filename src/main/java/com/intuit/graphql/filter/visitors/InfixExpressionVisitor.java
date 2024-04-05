@@ -79,7 +79,7 @@ public class InfixExpressionVisitor implements ExpressionVisitor<String> {
         expressionBuilder.append("(")
                 .append(compoundExpression.getLeftOperand().accept(this, ""))
                 .append(" ")
-                .append(compoundExpression.getOperator().getName())
+                .append(compoundExpression.getOperator().getKey())
                 .append(" ")
                 .append(compoundExpression.getRightOperand().accept(this, ""))
                 .append(")");
@@ -102,7 +102,7 @@ public class InfixExpressionVisitor implements ExpressionVisitor<String> {
         expressionBuilder.append("(")
                 .append(binaryExpression.getLeftOperand().accept(this, ""))
                 .append(" ")
-                .append(binaryExpression.getOperator().getName())
+                .append(binaryExpression.getOperator().getKey())
                 .append(" ")
                 .append(binaryExpression.getRightOperand().accept(this, ""))
                 .append(")");

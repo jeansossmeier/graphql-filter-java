@@ -16,6 +16,8 @@
  */
 package com.intuit.graphql.filter.ast;
 
+import java.util.Objects;
+
 /**
  * Class of operators for supporting relational and logical expressions.
  *
@@ -23,17 +25,17 @@ package com.intuit.graphql.filter.ast;
  * @author jeansossmeier
  */
 public class Operator {
-    private String name;
+    private String key;
     private String type;
     private Kind kind;
 
-    public Operator(String name, Kind kind, String... type) {
-        this.name = name;
+    public Operator(String key, Kind kind, String... type) {
+        this.key = key;
         this.kind = kind;
         this.type = String.join("|", type);
     }
 
-    public String getName() { return name; }
+    public String getKey() { return key; }
     public String getType() { return type; }
     public Kind getKind() { return kind; }
 
@@ -60,4 +62,17 @@ public class Operator {
     public static final Operator LTE = new Operator("lte", Operator.Kind.BINARY, TYPE_NUMERIC);
     public static final Operator IN = new Operator("in", Operator.Kind.BINARY, TYPE_STRING, TYPE_NUMERIC);
     public static final Operator BETWEEN = new Operator("between", Operator.Kind.BINARY, TYPE_DATETIME, TYPE_NUMERIC);
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Operator operator = (Operator) o;
+        return Objects.equals(key, operator.key) && Objects.equals(type, operator.type) && kind == operator.kind;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(key, type, kind);
+    }
 }

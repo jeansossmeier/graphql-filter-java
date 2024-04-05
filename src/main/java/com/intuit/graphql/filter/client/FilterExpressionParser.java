@@ -104,7 +104,7 @@ public class FilterExpressionParser {
                 (entry.getValue() instanceof Map)
                         ? (BinaryExpression)
                         createExpressionTree((Map) entry.getValue())
-                        : (BinaryExpression) handleBinary(entry, Operator.IN.getName());
+                        : (BinaryExpression) handleBinary(entry, Operator.IN.getKey());
 
         binaryExpression.setLeftOperand(leftOperand);
         return binaryExpression;

@@ -49,7 +49,7 @@ public class OperatorRegistry {
     private final Map<String, Operator> operators = new HashMap<>();
 
     public void registerOperator(Operator operator) {
-        operators.put(operator.getName(), operator);
+        operators.put(operator.getKey(), operator);
     }
 
     public Operator getOperator(String name) {
