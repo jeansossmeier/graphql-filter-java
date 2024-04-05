@@ -1,12 +1,13 @@
 package com.intuit.graphql.filter.visitors;
 
 import com.intuit.graphql.filter.ast.BinaryExpression;
+import com.intuit.graphql.filter.ast.Operator;
 
 public interface CustomFieldExpression {
 
     String getFieldName();
 
-    String getOperator();
+    Operator getOperator();
 
     String generateExpression(
             BinaryExpression binaryExpression,
