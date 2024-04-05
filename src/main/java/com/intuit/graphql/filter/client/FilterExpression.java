@@ -31,7 +31,6 @@ import java.util.Map;
  * @author jeansossmeier
  */
 public class FilterExpression {
-
     private Field field;
     private Map<String,String> fieldMap;
     private Expression expressionAst;

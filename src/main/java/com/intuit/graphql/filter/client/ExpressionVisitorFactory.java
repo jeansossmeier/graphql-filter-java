@@ -41,9 +41,11 @@ public class ExpressionVisitorFactory {
      * @param fieldMap
      * @return
      */
-    static ExpressionVisitor getExpressionVisitor(ExpressionFormat format,
-                                                  Map<String, String> fieldMap,
-                                                  FieldValueTransformer fieldValueTransformer) {
+    public static ExpressionVisitor getExpressionVisitor(
+            ExpressionFormat format,
+            Map<String, String> fieldMap,
+            FieldValueTransformer fieldValueTransformer) {
+
         ExpressionVisitor expressionVisitor = new InfixExpressionVisitor(fieldMap, fieldValueTransformer);
         if (format != null) {
             switch (format) {
