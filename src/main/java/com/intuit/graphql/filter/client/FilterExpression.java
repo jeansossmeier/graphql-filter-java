@@ -32,7 +32,7 @@ import java.util.Map;
  */
 public class FilterExpression {
     private Field field;
-    private Map<String,String> fieldMap;
+    private Map<String, String> fieldMap;
     private Expression expressionAst;
     private FieldValueTransformer fieldValueTransformer;
 
@@ -48,7 +48,7 @@ public class FilterExpression {
      * instance of FilterExpression class.
      */
     public static class FilterExpressionBuilder {
-        private static final String FILTER_ARG = "filter";
+        public static final String FILTER_ARG = "filter";
 
         private Field field;
         private Map<String,String> fieldMap;

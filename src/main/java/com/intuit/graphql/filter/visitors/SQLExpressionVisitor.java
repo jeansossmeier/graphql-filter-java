@@ -7,6 +7,7 @@ import com.intuit.graphql.filter.ast.ExpressionField;
 import com.intuit.graphql.filter.ast.ExpressionValue;
 import com.intuit.graphql.filter.ast.Operator;
 import com.intuit.graphql.filter.ast.UnaryExpression;
+import com.intuit.graphql.filter.client.DefaultFieldValueTransformer;
 import com.intuit.graphql.filter.client.FieldValuePair;
 import com.intuit.graphql.filter.client.FieldValueTransformer;
 
@@ -65,16 +66,21 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
     private boolean generateWherePrefix = true;
     private String metadataPrefix = DEFAULT_METADATA_PREFIX;
 
-    public SQLExpressionVisitor(
-            final Map<String, String> fieldMap,
-            final FieldValueTransformer fieldValueTransformer) {
+    public SQLExpressionVisitor(final Map<String, String> fieldMap) {
         this.operatorStack = new ArrayDeque<>();
         this.fieldStack = new ArrayDeque<>();
         this.mappings = new HashMap<>(DEFAULT_MAPPINGS);
         this.metadata = new HashMap<>();
         this.fieldMap = fieldMap;
-        this.fieldValueTransformer = fieldValueTransformer;
+        this.fieldValueTransformer = new DefaultFieldValueTransformer();
         this.expressionValueVisitor = SQLExpressionValueVisitor.DEFAULT;
+    }
+
+    public SQLExpressionVisitor(
+            final Map<String, String> fieldMap,
+            final FieldValueTransformer fieldValueTransformer) {
+        this(fieldMap);
+        this.fieldValueTransformer = fieldValueTransformer;
     }
 
     /** Returns the SQL WHERE clause string from the expression tree. */
