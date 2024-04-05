@@ -39,6 +39,10 @@ public class SQLExpressionValueVisitor {
         return expressionBuilder.toString();
     }
 
+    public Map<Operator, ExpressionValueHandler> getExpressionValueHandlers() {
+        return expressionValueHandlers;
+    }
+
     protected String resolveValue(Comparable value) {
         if (value instanceof Number) {
             return value.toString();
@@ -124,12 +128,5 @@ public class SQLExpressionValueVisitor {
 
             expressionBuilder.append(")");
         }
-    }
-
-    public interface ExpressionValueHandler {
-        void handle(
-                Operator operator,
-                StringBuilder expressionBuilder,
-                ExpressionValue<? extends Comparable> expressionValue);
     }
 }
