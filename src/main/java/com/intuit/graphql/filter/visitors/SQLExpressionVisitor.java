@@ -133,8 +133,8 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
         final String[] filterValues = rightOperand.replaceAll("[()]", "").split(",");
         collectMetadata(leftOperand, filterValues);
 
-        final String resolvedOperator = resolveOperator(binaryExpression.getOperator());
-        if (customExpressionResolver.contains(leftOperand, resolvedOperator)) {
+        if (customExpressionResolver.contains(leftOperand, binaryExpression.getOperator())) {
+            final String resolvedOperator = resolveOperator(binaryExpression.getOperator());
             return formatCustomBinaryExpression(
                     data, leftOperand, resolvedOperator, rightOperand, binaryExpression, filterValues);
         } else {
@@ -205,11 +205,6 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
         return expressionValueVisitor.visitExpressionValue(operator, value, data);
     }
 
-    private CustomFieldExpression resolveCustomExpressions(
-            final String fieldName, final String resolvedOperator) {
-        return customExpressionResolver.resolve(fieldName, resolvedOperator);
-    }
-
     private String prepareCustomExpression(
             final String fieldName,
             final String resolvedOperator,
@@ -217,8 +212,8 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
             final BinaryExpression binaryExpression,
             final String[] filterValues) {
 
-        final CustomFieldExpression customExpression =
-                resolveCustomExpressions(fieldName, resolvedOperator);
+        final CustomFieldExpression customExpression = customExpressionResolver.resolve(
+                fieldName, binaryExpression.getOperator());
 
         if (filterValues.length == 1) {
             return customExpression.generateExpression(
