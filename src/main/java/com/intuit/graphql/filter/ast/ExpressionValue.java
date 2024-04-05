@@ -36,7 +36,7 @@ public class ExpressionValue<V> implements Expression {
      * @return
      */
     @Override
-    public String infix() {
+    public String stringValue() {
         final StringBuilder infix = new StringBuilder();
         if (value == null) {
             return null;

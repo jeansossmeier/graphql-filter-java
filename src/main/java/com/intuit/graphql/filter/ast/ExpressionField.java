@@ -36,7 +36,7 @@ public class ExpressionField implements Expression {
      * @return
      */
     @Override
-    public String infix() {
+    public String stringValue() {
         return fieldName;
     }
 

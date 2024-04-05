@@ -30,7 +30,7 @@ public interface Expression{
      * filter expression ast.
      * @return
      */
-    public String infix();
+    public String stringValue();
 
     /**
      * This method accepts a expression visitor and calls

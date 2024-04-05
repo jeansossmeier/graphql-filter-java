@@ -29,7 +29,7 @@ public interface FieldValueTransformer {
      * @param fieldName
      * @return
      */
-    public String transformField(String fieldName);
+    String transformField(String fieldName);
 
     /**
      * Returns an instance of FieldValuePair.
@@ -37,6 +37,6 @@ public interface FieldValueTransformer {
      * @param value
      * @return
      */
-    public FieldValuePair<? extends Object> transformValue(String fieldName, Object value);
+    FieldValuePair<? extends Object> transformValue(String fieldName, Object value);
 }
 

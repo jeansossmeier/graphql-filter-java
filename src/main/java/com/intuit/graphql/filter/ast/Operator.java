@@ -33,7 +33,6 @@ public class Operator {
         this.type = String.join("|", type);
     }
 
-
     public String getName() { return name; }
     public String getType() { return type; }
     public Kind getKind() { return kind; }

@@ -139,13 +139,13 @@ public class InfixExpressionVisitor implements ExpressionVisitor<String> {
     @Override
     public String visitExpressionField(ExpressionField field, String data) {
         StringBuilder expressionBuilder = new StringBuilder(data);
-        if (fieldMap != null && fieldMap.get(field.infix()) != null) {
-            expressionBuilder.append(fieldMap.get(field.infix()));
-        } else if (fieldValueTransformer != null && fieldValueTransformer.transformField(field.infix()) != null) {
-            expressionBuilder.append(fieldValueTransformer.transformField(field.infix()));
+        if (fieldMap != null && fieldMap.get(field.stringValue()) != null) {
+            expressionBuilder.append(fieldMap.get(field.stringValue()));
+        } else if (fieldValueTransformer != null && fieldValueTransformer.transformField(field.stringValue()) != null) {
+            expressionBuilder.append(fieldValueTransformer.transformField(field.stringValue()));
             fieldStack.push(field); //pushing the field for lookup while visiting value.
         } else {
-            expressionBuilder.append(field.infix());
+            expressionBuilder.append(field.stringValue());
         }
         return expressionBuilder.toString();
     }
@@ -164,7 +164,7 @@ public class InfixExpressionVisitor implements ExpressionVisitor<String> {
     public String visitExpressionValue(ExpressionValue<? extends Comparable> value, String data) {
         if (!fieldStack.isEmpty() && fieldValueTransformer != null) {
             ExpressionField field  = fieldStack.pop(); // pop the field associated with this value.
-            FieldValuePair fieldValuePair = fieldValueTransformer.transformValue(field.infix(),value.value());
+            FieldValuePair fieldValuePair = fieldValueTransformer.transformValue(field.stringValue(),value.value());
             if (fieldValuePair != null && fieldValuePair.getValue() != null) {
                 value = new ExpressionValue(fieldValuePair.getValue());
             }

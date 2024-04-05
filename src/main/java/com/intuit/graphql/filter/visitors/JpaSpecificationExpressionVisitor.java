@@ -27,7 +27,6 @@ import com.intuit.graphql.filter.client.FieldValueTransformer;
 import org.springframework.data.jpa.domain.Specification;
 
 import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
 import javax.persistence.criteria.Path;
 import javax.persistence.criteria.Predicate;
 import javax.persistence.criteria.Root;
@@ -146,7 +145,7 @@ public class JpaSpecificationExpressionVisitor<T> implements ExpressionVisitor<S
     public Specification<T> visitBinaryExpression(BinaryExpression binaryExpression, Specification<T> data) {
         return (root, criteriaQuery, criteriaBuilder) -> {
             ExpressionValue<? extends Comparable> operandValue = (ExpressionValue<? extends Comparable>)binaryExpression.getRightOperand();
-            String fieldName = mappedFieldName(binaryExpression.getLeftOperand().infix());
+            String fieldName = mappedFieldName(binaryExpression.getLeftOperand().stringValue());
             operandValue = getTransformedValue(operandValue);
             Path path = root.get(fieldName);
             return resolvePredicate(binaryExpression.getOperator(), root, criteriaBuilder, path, operandValue);

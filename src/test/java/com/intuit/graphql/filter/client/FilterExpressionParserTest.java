@@ -37,7 +37,7 @@ public class FilterExpressionParserTest {
 
         // Verify assertions.
         Assert.assertNotNull(expression);
-        Assert.assertEquals("(firstName contains ABC)", expression.infix());
+        Assert.assertEquals("(firstName contains ABC)", expression.stringValue());
     }
 
     @Test
@@ -51,7 +51,7 @@ public class FilterExpressionParserTest {
 
         // Verify assertions.
         Assert.assertNotNull(expression);
-        Assert.assertEquals("((firstName contains ABC) or (lastName equals XYZ))", expression.infix());
+        Assert.assertEquals("((firstName contains ABC) or (lastName equals XYZ))", expression.stringValue());
     }
 
 
