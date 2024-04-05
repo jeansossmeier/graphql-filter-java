@@ -61,7 +61,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
     private SQLExpressionValueVisitor expressionValueVisitor;
     private CustomExpressionResolver customExpressionResolver = (fieldName, operator) -> null;
     private Map<Operator, String> mappings;
-    private Map<String, List<String>> metadata;
+    private Map<String, List<String>> metadataCollector;
 
     private boolean generateWherePrefix = true;
     private String metadataPrefix = DEFAULT_METADATA_PREFIX;
@@ -70,7 +70,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
         this.operatorStack = new ArrayDeque<>();
         this.fieldStack = new ArrayDeque<>();
         this.mappings = new HashMap<>(DEFAULT_MAPPINGS);
-        this.metadata = new HashMap<>();
+        this.metadataCollector = new HashMap<>();
         this.fieldMap = fieldMap;
         this.fieldValueTransformer = new DefaultFieldValueTransformer();
         this.expressionValueVisitor = SQLExpressionValueVisitor.DEFAULT;
@@ -269,7 +269,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
                             .append(DOUBLE_QUOTE)
                             .toString());
         }
-        metadata.put(metadataPrefix + metaDataType, filterValueList);
+        metadataCollector.put(metadataPrefix + metaDataType, filterValueList);
     }
 
     public String resolveOperator(Operator operator) {
@@ -309,8 +309,12 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
         this.metadataPrefix = metadataPrefix;
     }
 
-    public Map<String, List<String>> getMetadata() {
-        return metadata;
+    public void setMetadataCollector(Map<String, List<String>> metadataCollector) {
+        this.metadataCollector = metadataCollector;
+    }
+
+    public Map<String, List<String>> getMetadataCollector() {
+        return metadataCollector;
     }
 
     public SQLExpressionValueVisitor getExpressionValueVisitor() {
