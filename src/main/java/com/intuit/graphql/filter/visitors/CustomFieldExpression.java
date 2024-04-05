@@ -3,6 +3,7 @@ package com.intuit.graphql.filter.visitors;
 import com.intuit.graphql.filter.ast.BinaryExpression;
 import com.intuit.graphql.filter.ast.Operator;
 
+import java.util.Arrays;
 import java.util.List;
 
 public interface CustomFieldExpression {
@@ -31,5 +32,13 @@ public interface CustomFieldExpression {
 
     default LogicalOperator getEnclosingLogicalOperator() {
         return LogicalOperator.OR;
+    }
+
+    default <T> List<T> include(T... objects) {
+        return Arrays.asList(objects);
+    }
+
+    default <T> List<T> exclude(T... objects) {
+        return Arrays.asList(objects);
     }
 }

@@ -87,4 +87,8 @@ public class OperatorRegistry {
 
         return registry;
     }
+
+    public Map<String, Operator> getOperators() {
+        return operators;
+    }
 }
