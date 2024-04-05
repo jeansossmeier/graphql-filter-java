@@ -6,7 +6,7 @@
 
   <groupId>com.intuit.graphql</groupId>
   <artifactId>graphql-filter-java</artifactId>
-  <version>1.1.0</version>
+  <version>1.2.0</version>
 
   <name>${project.artifactId}</name>
   <description>A java library to transform graphql filter into database filter</description>
@@ -34,17 +34,23 @@
       <organization>Intuit, Inc.</organization>
       <organizationUrl>http://www.intuit.com</organizationUrl>
     </developer>
+    <developer>
+      <name>Jean Luck Sossmeier</name>
+      <id>jeansossmeier</id>
+    </developer>
   </developers>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <maven.compiler.source>17</maven.compiler.source>
     <maven.compiler.target>17</maven.compiler.target>
-    <graphql.version>14.0</graphql.version>
-    <graphql.scalar.version>1.0</graphql.scalar.version>
-    <spring.data.version>2.1.8.RELEASE</spring.data.version>
-    <jpa.version>2.2</jpa.version>
-    <junit.version>4.13.1</junit.version>
+    <graphql.version>21.5</graphql.version>
+    <graphql.scalar.version>21.0</graphql.scalar.version>
+    <jpa.version>3.0.0</jpa.version>
+    <spring.data.version>3.2.4</spring.data.version>
+    <spring-data-elasticsearch.version>5.2.4</spring-data-elasticsearch.version>
+    <spring-data-mongodb.version>4.2.4</spring-data-mongodb.version>
+    <junit.version>4.13.2</junit.version>
   </properties>
 
   <distributionManagement>
@@ -81,13 +87,13 @@
     <dependency>
       <groupId>org.springframework.data</groupId>
       <artifactId>spring-data-mongodb</artifactId>
-      <version>${spring.data.version}</version>
+      <version>${spring-data-mongodb.version}</version>
     </dependency>
 
     <dependency>
       <groupId>org.springframework.data</groupId>
       <artifactId>spring-data-elasticsearch</artifactId>
-      <version>${spring.data.version}</version>
+      <version>${spring-data-elasticsearch.version}</version>
     </dependency>
 
     <dependency>
@@ -97,8 +103,8 @@
     </dependency>
 
     <dependency>
-      <groupId>javax.persistence</groupId>
-      <artifactId>javax.persistence-api</artifactId>
+      <groupId>jakarta.persistence</groupId>
+      <artifactId>jakarta.persistence-api</artifactId>
       <version>${jpa.version}</version>
     </dependency>
 

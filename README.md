@@ -8,7 +8,7 @@ This library helps GraphQL developers build awesome APIs with fine grain filteri
 
 ## Requirements
 * grahql-java (v13.x)
-* Java 8.x & Above
+* Java 17 & Above
 
 ## Features
 This library will help create filter conditions which are dynamically created by combining any supported filter criteria field along with any of the supported logical operations including AND, OR and NOT.  Consider the examples below.
