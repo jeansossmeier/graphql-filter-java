@@ -51,14 +51,14 @@ public abstract class AbstractExpression implements Expression {
      * filter expression ast.
      * @return
      */
-    public String stringValue() {
+    public String infix() {
         StringBuilder expressionBuilder = new StringBuilder();
         expressionBuilder.append("(")
-                .append(getLeftOperand().stringValue())
+                .append(getLeftOperand().infix())
                 .append(" ")
                 .append(getOperator().getName())
                 .append(" ")
-                .append(getRightOperand().stringValue())
+                .append(getRightOperand().infix())
                 .append(")");
         return expressionBuilder.toString();
     }

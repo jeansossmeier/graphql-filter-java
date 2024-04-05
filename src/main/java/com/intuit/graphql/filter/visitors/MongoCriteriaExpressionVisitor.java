@@ -162,7 +162,7 @@ public class MongoCriteriaExpressionVisitor<T> implements ExpressionVisitor<Crit
      */
     @Override
     public Criteria visitBinaryExpression(final BinaryExpression binaryExpression, final Criteria data) {
-        final String fieldName = mappedFieldName(binaryExpression.getLeftOperand().stringValue());
+        final String fieldName = mappedFieldName(binaryExpression.getLeftOperand().infix());
         ExpressionValue<? extends Comparable> operandValue = (ExpressionValue<? extends Comparable>) binaryExpression.getRightOperand();
         operandValue = getTransformedValue(operandValue);
         return getCriteria(binaryExpression.getOperator(), fieldName, operandValue);

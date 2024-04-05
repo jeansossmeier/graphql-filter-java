@@ -22,6 +22,7 @@ import com.intuit.graphql.filter.visitors.ExpressionVisitor;
  * in the expression tree.
  *
  * @author sjaiswal
+ * @author jeansossmeier
  */
 public class ExpressionValue<V> implements Expression {
 
@@ -36,7 +37,7 @@ public class ExpressionValue<V> implements Expression {
      * @return
      */
     @Override
-    public String stringValue() {
+    public String infix() {
         final StringBuilder infix = new StringBuilder();
         if (value == null) {
             return null;
@@ -46,7 +47,7 @@ public class ExpressionValue<V> implements Expression {
             for (V val : (Iterable<V>) value) {
                 infix.append(val.toString()).append(",");
             }
-            return infix.toString() == "" ? "" : infix.substring(0, infix.length()-1);
+            return infix.toString().isEmpty() ? "" : infix.substring(0, infix.length()-1);
         } else {
             infix.append(value);
             return infix.toString();

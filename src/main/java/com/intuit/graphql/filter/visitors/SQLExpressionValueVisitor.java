@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 
 public class SQLExpressionValueVisitor {
+    public static final SQLExpressionValueVisitor DEFAULT = new SQLExpressionValueVisitor();
+
     private final Map<Operator, ExpressionValueHandler> expressionValueHandlers;
 
     public SQLExpressionValueVisitor() {
@@ -52,7 +54,7 @@ public class SQLExpressionValueVisitor {
                 StringBuilder expressionBuilder,
                 ExpressionValue<? extends Comparable> expressionValue) {
 
-            final String value = expressionValue.stringValue();
+            final String value = expressionValue.infix();
             if (hasWildcardValue(value)) {
                 expressionBuilder.append("'" + value + "'");
             } else {
@@ -72,7 +74,7 @@ public class SQLExpressionValueVisitor {
                 StringBuilder expressionBuilder,
                 ExpressionValue<? extends Comparable> expressionValue) {
 
-            expressionBuilder.append("'").append(expressionValue.stringValue()).append("%").append("'");
+            expressionBuilder.append("'").append(expressionValue.infix()).append("%").append("'");
         }
     }
 
@@ -83,7 +85,7 @@ public class SQLExpressionValueVisitor {
                 StringBuilder expressionBuilder,
                 ExpressionValue<? extends Comparable> expressionValue) {
 
-            expressionBuilder.append("'").append("%").append(expressionValue.stringValue()).append("'");
+            expressionBuilder.append("'").append("%").append(expressionValue.infix()).append("'");
         }
     }
 

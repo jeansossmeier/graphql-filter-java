@@ -145,7 +145,7 @@ public class JpaSpecificationExpressionVisitor<T> implements ExpressionVisitor<S
     public Specification<T> visitBinaryExpression(BinaryExpression binaryExpression, Specification<T> data) {
         return (root, criteriaQuery, criteriaBuilder) -> {
             ExpressionValue<? extends Comparable> operandValue = (ExpressionValue<? extends Comparable>)binaryExpression.getRightOperand();
-            String fieldName = mappedFieldName(binaryExpression.getLeftOperand().stringValue());
+            String fieldName = mappedFieldName(binaryExpression.getLeftOperand().infix());
             operandValue = getTransformedValue(operandValue);
             Path path = root.get(fieldName);
             return resolvePredicate(binaryExpression.getOperator(), root, criteriaBuilder, path, operandValue);

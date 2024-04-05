@@ -133,7 +133,7 @@ public class ElasticsearchCriteriaExpressionVisitor implements ExpressionVisitor
      */
     @Override
     public Criteria visitBinaryExpression(final BinaryExpression binaryExpression, final Criteria data) {
-        final String fieldName = mappedFieldName(binaryExpression.getLeftOperand().stringValue());
+        final String fieldName = mappedFieldName(binaryExpression.getLeftOperand().infix());
         ExpressionValue<? extends Comparable> operandValue = (ExpressionValue<? extends Comparable>) binaryExpression.getRightOperand();
         operandValue = getTransformedValue(operandValue);
         return applyOperator(binaryExpression, data, fieldName, operandValue.value());
