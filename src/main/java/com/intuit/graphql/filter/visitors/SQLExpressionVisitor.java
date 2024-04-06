@@ -10,8 +10,8 @@ import com.intuit.graphql.filter.ast.UnaryExpression;
 import com.intuit.graphql.filter.client.DefaultFieldValueTransformer;
 import com.intuit.graphql.filter.client.FieldValuePair;
 import com.intuit.graphql.filter.client.FieldValueTransformer;
+import com.intuit.graphql.filter.client.SqlQueryValueNormalizer;
 
-import java.text.Normalizer;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -22,12 +22,12 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 public class SQLExpressionVisitor implements ExpressionVisitor<String> {
-    private static final char RIGHT_SINGLE_QUOTATION_MARK = '’';
-    private static final char APOSTROPHE = '\'';
     private static final String DOUBLE_QUOTE = "\"";
     private static final String ESCAPED_DOUBLE_QUOTE = "\\\\\\\"";
     private static final String DEFAULT_METADATA_PREFIX = "metadata@";
+    private static final SqlQueryValueNormalizer DEFAULT_NORMALIZER = new SqlQueryValueNormalizer();
     private static final Map<Operator, String> DEFAULT_MAPPINGS = new HashMap<>();
+    private static final DefaultFieldValueTransformer DEFAULT_FIELD_VALUE_TRANSFORMER = new DefaultFieldValueTransformer();
 
     static {
         // Logical operators
@@ -62,6 +62,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
     private CustomExpressionResolver customExpressionResolver = (fieldName, operator) -> null;
     private Map<Operator, String> mappings;
     private Map<String, List<String>> metadataCollector;
+    private SqlQueryValueNormalizer sqlQueryValueNormalizer;
 
     private boolean generateWherePrefix = true;
     private String metadataPrefix = DEFAULT_METADATA_PREFIX;
@@ -72,8 +73,9 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
         this.mappings = new HashMap<>(DEFAULT_MAPPINGS);
         this.metadataCollector = new HashMap<>();
         this.fieldMap = fieldMap;
-        this.fieldValueTransformer = new DefaultFieldValueTransformer();
         this.expressionValueVisitor = SQLExpressionValueVisitor.DEFAULT;
+        this.fieldValueTransformer = DEFAULT_FIELD_VALUE_TRANSFORMER;
+        this.sqlQueryValueNormalizer = DEFAULT_NORMALIZER;
     }
 
     public SQLExpressionVisitor(
@@ -127,18 +129,17 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
         final String leftOperand = binaryExpression.getLeftOperand().accept(this, "");
         operatorStack.push(binaryExpression.getOperator());
 
-        final String rightOperand =
-                normalizeString(binaryExpression.getRightOperand().accept(this, ""));
-
+        final String rightOperand = binaryExpression.getRightOperand().accept(this, "");
         final String[] filterValues = rightOperand.replaceAll("[()]", "").split(",");
         collectMetadata(leftOperand, filterValues);
 
+        final String normalizedRightOperand = normalizeString(rightOperand);
         if (customExpressionResolver.contains(leftOperand, binaryExpression.getOperator())) {
             final String resolvedOperator = resolveOperator(binaryExpression.getOperator());
             return formatCustomBinaryExpression(
-                    data, leftOperand, resolvedOperator, rightOperand, binaryExpression, filterValues);
+                    data, leftOperand, resolvedOperator, normalizedRightOperand, binaryExpression, filterValues);
         } else {
-            return formatBinaryExpression(data, leftOperand, binaryExpression, rightOperand);
+            return formatBinaryExpression(data, leftOperand, binaryExpression, normalizedRightOperand);
         }
     }
 
@@ -224,7 +225,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
                 customExpression.getEnclosingLogicalOperator().getValue();
         return Arrays.stream(filterValues)
                 .map(filterValue -> customExpression.generateExpression(
-                        binaryExpression, fieldName, filterValue, resolvedOperator))
+                        binaryExpression, fieldName, normalizeString(filterValue), resolvedOperator))
                 .collect(Collectors.joining(" " + enclosingLogicalOperator + " "));
     }
 
@@ -282,10 +283,9 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
     public Map<Operator, String> getMappings() {
         return mappings;
     }
-    
-    private String normalizeString(final String target) {
-        return Normalizer.normalize(target, Normalizer.Form.NFC)
-                .replace(RIGHT_SINGLE_QUOTATION_MARK, APOSTROPHE);
+
+    private String normalizeString(final String input) {
+        return sqlQueryValueNormalizer.handle(input);
     }
 
     public boolean isGenerateWherePrefix() {

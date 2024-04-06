@@ -4,6 +4,7 @@ import com.intuit.graphql.filter.ast.BinaryExpression;
 import com.intuit.graphql.filter.ast.Operator;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 public interface CustomFieldExpression {
@@ -15,19 +16,19 @@ public interface CustomFieldExpression {
             String resolvedOperator);
 
     default List<String> getIncludedFieldNames() {
-        return List.of();
+        return Collections.EMPTY_LIST;
     }
 
     default List<Operator> getIncludedOperators() {
-        return List.of();
+        return Collections.EMPTY_LIST;
     }
 
     default List<String> getExcludedFieldNames() {
-        return List.of();
+        return Collections.EMPTY_LIST;
     }
 
     default List<Operator> getExcludedOperators()  {
-        return List.of();
+        return Collections.EMPTY_LIST;
     }
 
     default LogicalOperator getEnclosingLogicalOperator() {
