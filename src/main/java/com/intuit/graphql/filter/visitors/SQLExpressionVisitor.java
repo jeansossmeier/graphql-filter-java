@@ -1,191 +1,176 @@
-/*
-  Copyright 2020 Intuit Inc.
-
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
-
-      http://www.apache.org/licenses/LICENSE-2.0
-
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
- */
 package com.intuit.graphql.filter.visitors;
 
 import com.intuit.graphql.filter.ast.BinaryExpression;
 import com.intuit.graphql.filter.ast.CompoundExpression;
-import com.intuit.graphql.filter.ast.UnaryExpression;
 import com.intuit.graphql.filter.ast.Expression;
 import com.intuit.graphql.filter.ast.ExpressionField;
 import com.intuit.graphql.filter.ast.ExpressionValue;
 import com.intuit.graphql.filter.ast.Operator;
+import com.intuit.graphql.filter.ast.UnaryExpression;
+import com.intuit.graphql.filter.client.DefaultFieldValueTransformer;
 import com.intuit.graphql.filter.client.FieldValuePair;
 import com.intuit.graphql.filter.client.FieldValueTransformer;
+import com.intuit.graphql.filter.client.SqlQueryValueNormalizer;
 
 import java.util.ArrayDeque;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
-/**
- * This class is responsible for traversing
- * the expression tree and generating an
- * SQL WHERE clause from it with correct precedence
- * order marked by parenthesis.
- *
- * @author sjaiswal
- * @author jeansossmeier
- */
 public class SQLExpressionVisitor implements ExpressionVisitor<String> {
-    private static final Map<Operator, String> MAPPINGS = new HashMap<>();
-
-    private Deque<Operator> operatorStack;
-    private Map<String, String> fieldMap;
-    private Deque<ExpressionField> fieldStack;
-    private FieldValueTransformer fieldValueTransformer;
+    private static final String DOUBLE_QUOTE = "\"";
+    private static final String ESCAPED_DOUBLE_QUOTE = "\\\\\\\"";
+    private static final String DEFAULT_METADATA_PREFIX = "metadata@";
+    private static final SqlQueryValueNormalizer DEFAULT_NORMALIZER = new SqlQueryValueNormalizer();
+    private static final Map<Operator, String> DEFAULT_MAPPINGS = new HashMap<>();
+    private static final DefaultFieldValueTransformer DEFAULT_FIELD_VALUE_TRANSFORMER = new DefaultFieldValueTransformer();
 
     static {
         // Logical operators
-        MAPPINGS.put(Operator.AND, "AND");
-        MAPPINGS.put(Operator.OR, "OR");
-        MAPPINGS.put(Operator.NOT, "NOT");
+        DEFAULT_MAPPINGS.put(Operator.AND, "AND");
+        DEFAULT_MAPPINGS.put(Operator.OR, "OR");
+        DEFAULT_MAPPINGS.put(Operator.NOT, "NOT");
 
         // Relational string operators
-        MAPPINGS.put(Operator.EQUALS, "=");
-        MAPPINGS.put(Operator.CONTAINS, "LIKE");
-        MAPPINGS.put(Operator.STARTS, "LIKE");
-        MAPPINGS.put(Operator.ENDS, "LIKE");
+        DEFAULT_MAPPINGS.put(Operator.EQUALS, "=");
+        DEFAULT_MAPPINGS.put(Operator.CONTAINS, "LIKE");
+        DEFAULT_MAPPINGS.put(Operator.STARTS, "LIKE");
+        DEFAULT_MAPPINGS.put(Operator.ENDS, "LIKE");
 
         // Relational numeric operators
-        MAPPINGS.put(Operator.LT, "<");
-        MAPPINGS.put(Operator.GT, ">");
-        MAPPINGS.put(Operator.EQ, "=");
-        MAPPINGS.put(Operator.GTE, ">=");
-        MAPPINGS.put(Operator.LTE, "<=");
+        DEFAULT_MAPPINGS.put(Operator.LT, "<");
+        DEFAULT_MAPPINGS.put(Operator.GT, ">");
+        DEFAULT_MAPPINGS.put(Operator.EQ, "=");
+        DEFAULT_MAPPINGS.put(Operator.GTE, ">=");
+        DEFAULT_MAPPINGS.put(Operator.LTE, "<=");
 
         // Common operators
-        MAPPINGS.put(Operator.IN, "IN");
-        MAPPINGS.put(Operator.BETWEEN, "BETWEEN");
+        DEFAULT_MAPPINGS.put(Operator.IN, "IN");
+        DEFAULT_MAPPINGS.put(Operator.BETWEEN, "BETWEEN");
     }
 
-    public static String resolveOperator(Operator operator) {
-        return MAPPINGS.getOrDefault(operator, "");
-    }
 
-    public static void addMapping(Operator operator, String sql) {
-        MAPPINGS.put(operator, sql);
-    }
+    private final Deque<Operator> operatorStack;
+    private final Deque<ExpressionField> fieldStack;
+    private final Map<String, String> fieldMap;
+    private FieldValueTransformer fieldValueTransformer;
+    private SQLExpressionValueVisitor expressionValueVisitor;
+    private CustomExpressionResolver customExpressionResolver = (fieldName, operator) -> null;
+    private Map<Operator, String> mappings;
+    private Map<String, List<String>> metadataCollector;
+    private SqlQueryValueNormalizer sqlQueryValueNormalizer;
 
-    public static void removeMapping(Operator operator) {
-        MAPPINGS.remove(operator);
+    private boolean generateWherePrefix = true;
+    private String metadataPrefix = DEFAULT_METADATA_PREFIX;
+
+    public SQLExpressionVisitor(final Map<String, String> fieldMap) {
+        this.operatorStack = new ArrayDeque<>();
+        this.fieldStack = new ArrayDeque<>();
+        this.mappings = new HashMap<>(DEFAULT_MAPPINGS);
+        this.metadataCollector = new HashMap<>();
+        this.fieldMap = fieldMap;
+        this.expressionValueVisitor = SQLExpressionValueVisitor.DEFAULT;
+        this.fieldValueTransformer = DEFAULT_FIELD_VALUE_TRANSFORMER;
+        this.sqlQueryValueNormalizer = DEFAULT_NORMALIZER;
     }
 
     public SQLExpressionVisitor(
-            Map<String,String> fieldMap,
-            FieldValueTransformer fieldValueTransformer
-    ) {
-        this.operatorStack = new ArrayDeque<>();
-        this.fieldMap = fieldMap;
-        this.fieldStack = new ArrayDeque<>();
+            final Map<String, String> fieldMap,
+            final FieldValueTransformer fieldValueTransformer) {
+        this(fieldMap);
         this.fieldValueTransformer = fieldValueTransformer;
     }
 
-    /**
-     * Returns the SQL WHERE clause string
-     * from the expression tree.
-     * @return
-     * @param expression
-     */
+    /** Returns the SQL WHERE clause string from the expression tree. */
     @Override
-    public String expression(Expression expression) {
-        String expressionString = "WHERE ";
+    public String expression(final Expression expression) {
+        String expressionString = generateWherePrefix ? "WHERE " : "";
         if (expression != null) {
             expressionString = expression.accept(this, expressionString);
         }
+
         return expressionString;
     }
 
     /**
-     * Handles the processing of compound
-     * expression node.
-     * @param compoundExpression
-     *          Contains compound expression.
-     * @param data
-     *          Buffer for storing processed data.
-     * @return
-     *          Data of processed node.
+     * Handles the processing of compound expression node.
+     *
+     * @param compoundExpression Contains compound expression.
+     * @param data Buffer for storing processed data.
+     * @return Data of processed node.
      */
     @Override
-    public String visitCompoundExpression(CompoundExpression compoundExpression, String data) {
-        StringBuilder expressionBuilder = new StringBuilder(data);
-        expressionBuilder.append("(")
+    public String visitCompoundExpression(
+            final CompoundExpression compoundExpression, final String data) {
+        return new StringBuilder(data)
+                .append("(")
                 .append(compoundExpression.getLeftOperand().accept(this, ""))
-                .append(" ").append(compoundExpression.getOperator().getName().toUpperCase()).append(" ")
+                .append(" ")
+                .append(resolveOperator(compoundExpression.getOperator()).toUpperCase())
+                .append(" ")
                 .append(compoundExpression.getRightOperand().accept(this, ""))
-                .append(")");
-        return expressionBuilder.toString();
-
+                .append(")")
+                .toString();
     }
 
     /**
-     * Handles the processing of binary
-     * expression node.
-     * @param binaryExpression
-     *          Contains binary expression.
-     * @param data
-     *          Buffer for storing processed data.
-     * @return
-     *          Data of processed node.
+     * Handles the processing of binary expression node.
+     *
+     * @param binaryExpression Contains binary expression.
+     * @param data Buffer for storing processed data.
+     * @return Data of processed node.
      */
     @Override
-    public String visitBinaryExpression(BinaryExpression binaryExpression, String data) {
-        StringBuilder expressionBuilder = new StringBuilder(data);
-        expressionBuilder.append("(")
-                .append(binaryExpression.getLeftOperand().accept(this, ""))
-                .append(" ").append(resolveOperator(binaryExpression.getOperator())).append(" ");
+    public String visitBinaryExpression(final BinaryExpression binaryExpression, final String data) {
+        final String leftOperand = binaryExpression.getLeftOperand().accept(this, "");
         operatorStack.push(binaryExpression.getOperator());
-        expressionBuilder.append(binaryExpression.getRightOperand().accept(this, ""))
-                .append(")");
-        return expressionBuilder.toString();
+
+        final String rightOperand = binaryExpression.getRightOperand().accept(this, "");
+        final String[] filterValues = rightOperand.replaceAll("[()]", "").split(",");
+        collectMetadata(leftOperand, filterValues);
+
+        final String normalizedRightOperand = normalizeString(rightOperand);
+        if (customExpressionResolver.contains(leftOperand, binaryExpression.getOperator())) {
+            final String resolvedOperator = resolveOperator(binaryExpression.getOperator());
+            return formatCustomBinaryExpression(
+                    data, leftOperand, resolvedOperator, normalizedRightOperand, binaryExpression, filterValues);
+        } else {
+            return formatBinaryExpression(data, leftOperand, binaryExpression, normalizedRightOperand);
+        }
     }
 
     /**
-     * Handles the processing of unary
-     * expression node.
-     * @param unaryExpression
-     *          Contains unary expression.
-     * @param data
-     *          Buffer for storing processed data.
-     * @return
-     *          Data of processed node.
+     * Handles the processing of unary expression node.
+     *
+     * @param unaryExpression Contains unary expression.
+     * @param data Buffer for storing processed data.
+     * @return Data of processed node.
      */
     @Override
-    public String visitUnaryExpression(UnaryExpression unaryExpression, String data) {
-        StringBuilder expressionBuilder = new StringBuilder(data);
-        expressionBuilder.append("(")
-                .append(" ").append(resolveOperator(unaryExpression.getOperator())).append(" ")
+    public String visitUnaryExpression(final UnaryExpression unaryExpression, final String data) {
+        return new StringBuilder(data)
+                .append("( ")
+                .append(resolveOperator(unaryExpression.getOperator()))
+                .append(" ")
                 .append(unaryExpression.getLeftOperand().accept(this, ""))
-                .append(")");
-        return expressionBuilder.toString();
+                .append(")")
+                .toString();
     }
 
     /**
-     * Handles the processing of expression
-     * field node.
-     * @param field
-     *          Contains expression field.
-     * @param data
-     *          Buffer for storing processed data.
-     * @return
-     *          Data of processed node.
+     * Handles the processing of expression field node.
+     *
+     * @param field Contains expression field.
+     * @param data Buffer for storing processed data.
+     * @return Data of processed node.
      */
     @Override
-    public String visitExpressionField(ExpressionField field, String data) {
-        StringBuilder expressionBuilder = new StringBuilder(data);
+    public String visitExpressionField(final ExpressionField field, final String data) {
+        final StringBuilder expressionBuilder = new StringBuilder(data);
         if (fieldMap != null && fieldMap.get(field.infix()) != null) {
             expressionBuilder.append(fieldMap.get(field.infix()));
         } else if (fieldValueTransformer != null && fieldValueTransformer.transformField(field.infix()) != null) {
@@ -198,20 +183,18 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
     }
 
     /**
-     * Handles the processing of expression
-     * value node.
-     * @param value
-     *          Contains expression value.
-     * @param data
-     *          Buffer for storing processed data.
-     * @return
-     *          Data of processed node.
+     * Handles the processing of expression value node.
+     *
+     * @param expressionValue Contains expression value.
+     * @param data Buffer for storing processed data.
+     * @return Data of processed node.
      */
     @Override
-    public String visitExpressionValue(ExpressionValue<? extends Comparable> value, String data) {
-        StringBuilder expressionBuilder = new StringBuilder(data);
-        Operator operator = operatorStack.pop();
+    public String visitExpressionValue(
+            final ExpressionValue<? extends Comparable> expressionValue, final String data) {
 
+        final Operator operator = operatorStack.pop();
+        ExpressionValue<? extends Comparable> value = expressionValue;
         if (!fieldStack.isEmpty() && fieldValueTransformer != null) {
             ExpressionField field  = fieldStack.pop(); // pop the field associated with this value.
             FieldValuePair fieldValuePair = fieldValueTransformer.transformValue(field.infix(),value.value());
@@ -220,30 +203,128 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
             }
         }
 
-        if (operator == Operator.STARTS) {
-            expressionBuilder.append("'").append(value.infix()).append("%").append("'");
-        } else if (operator == Operator.ENDS) {
-            expressionBuilder.append("'").append("%").append(value.infix()).append("'");
-        } else if (operator == Operator.CONTAINS) {
-            expressionBuilder.append("'").append("%").append(value.infix()).append("%").append("'");
-        } else if(operator == Operator.BETWEEN)  {
-            List<Comparable> expressionValues = (List<Comparable>)value.value();
-            expressionBuilder.append("'").append(expressionValues.get(0)).append("'")
-                    .append(" AND ")
-                    .append("'").append(expressionValues.get(1)).append("'");
-        } else if (operator == Operator.IN) {
-            List<Comparable> expressionValues = (List<Comparable>)value.value();
-            expressionBuilder.append("(");
-            for (int i = 0; i < expressionValues.size(); i++) {
-                expressionBuilder.append("'").append(expressionValues.get(i)).append("'");
-                if (i < expressionValues.size() - 1) {
-                    expressionBuilder.append(", ");
-                }
-            }
-            expressionBuilder.append(")");
-        } else {
-            expressionBuilder.append("'").append(value.infix()).append("'");
+        return expressionValueVisitor.visitExpressionValue(operator, value, data);
+    }
+
+    private String prepareCustomExpression(
+            final String fieldName,
+            final String resolvedOperator,
+            final String queryString,
+            final BinaryExpression binaryExpression,
+            final String[] filterValues) {
+
+        final CustomFieldExpression customExpression = customExpressionResolver.resolve(
+                fieldName, binaryExpression.getOperator());
+
+        if (filterValues.length == 1) {
+            return customExpression.generateExpression(
+                    binaryExpression, fieldName, queryString, resolvedOperator);
         }
-        return expressionBuilder.toString();
+
+        final String enclosingLogicalOperator =
+                customExpression.getEnclosingLogicalOperator().getValue();
+        return Arrays.stream(filterValues)
+                .map(filterValue -> customExpression.generateExpression(
+                        binaryExpression, fieldName, normalizeString(filterValue), resolvedOperator))
+                .collect(Collectors.joining(" " + enclosingLogicalOperator + " "));
+    }
+
+    private String formatBinaryExpression(
+            String data,
+            String leftOperand,
+            BinaryExpression binaryExpression,
+            String rightOperand) {
+
+        final String resolvedOperator = resolveOperator(binaryExpression.getOperator());
+        return String.format("%s(%s %s %s)", data, leftOperand, resolvedOperator, rightOperand);
+    }
+
+    private String formatCustomBinaryExpression(
+            String data,
+            String leftOperand,
+            String operator,
+            String rightOperand,
+            BinaryExpression binaryExpression,
+            String[] filterValues) {
+
+        final String customExpression = prepareCustomExpression(
+                leftOperand, operator, rightOperand, binaryExpression, filterValues);
+
+        return String.format("(%s %s)", data, customExpression);
+    }
+
+    private void collectMetadata(final String metaDataType, final String[] filterValues) {
+        final List<String> filterValueList = new ArrayList<>();
+        for (String filterValue : filterValues) {
+            final String normalizedFilterValue =
+                    filterValue.replace(DOUBLE_QUOTE, ESCAPED_DOUBLE_QUOTE);
+            filterValueList.add(
+                    new StringBuilder()
+                            .append(DOUBLE_QUOTE)
+                            .append(normalizedFilterValue, 1, normalizedFilterValue.length() - 1)
+                            .append(DOUBLE_QUOTE)
+                            .toString());
+        }
+        metadataCollector.put(metadataPrefix + metaDataType, filterValueList);
+    }
+
+    public String resolveOperator(Operator operator) {
+        return mappings.getOrDefault(operator, "");
+    }
+
+    public void addMapping(Operator operator, String sql) {
+        mappings.put(operator, sql);
+    }
+
+    public void removeMapping(Operator operator) {
+        mappings.remove(operator);
+    }
+
+    public Map<Operator, String> getMappings() {
+        return mappings;
+    }
+
+    private String normalizeString(final String input) {
+        return sqlQueryValueNormalizer.handle(input);
+    }
+
+    public boolean isGenerateWherePrefix() {
+        return generateWherePrefix;
+    }
+
+    public void setGenerateWherePrefix(boolean generateWherePrefix) {
+        this.generateWherePrefix = generateWherePrefix;
+    }
+
+    public String getMetadataPrefix() {
+        return metadataPrefix;
+    }
+
+    public void setMetadataPrefix(String metadataPrefix) {
+        this.metadataPrefix = metadataPrefix;
+    }
+
+    public void setMetadataCollector(Map<String, List<String>> metadataCollector) {
+        this.metadataCollector = metadataCollector;
+    }
+
+    public Map<String, List<String>> getMetadataCollector() {
+        return metadataCollector;
+    }
+
+    public SQLExpressionValueVisitor getExpressionValueVisitor() {
+        return expressionValueVisitor;
+    }
+
+    public void setExpressionValueVisitor(SQLExpressionValueVisitor expressionValueVisitor) {
+        this.expressionValueVisitor = expressionValueVisitor;
+    }
+
+    public CustomExpressionResolver getCustomExpressionResolver() {
+        return customExpressionResolver;
+    }
+
+    public void setCustomExpressionResolver(CustomExpressionResolver customExpressionResolver) {
+        this.customExpressionResolver = customExpressionResolver;
     }
 }

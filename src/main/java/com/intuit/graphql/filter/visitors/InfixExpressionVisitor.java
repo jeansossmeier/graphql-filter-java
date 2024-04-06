@@ -17,10 +17,10 @@ package com.intuit.graphql.filter.visitors;
 
 import com.intuit.graphql.filter.ast.BinaryExpression;
 import com.intuit.graphql.filter.ast.CompoundExpression;
-import com.intuit.graphql.filter.ast.UnaryExpression;
 import com.intuit.graphql.filter.ast.Expression;
 import com.intuit.graphql.filter.ast.ExpressionField;
 import com.intuit.graphql.filter.ast.ExpressionValue;
+import com.intuit.graphql.filter.ast.UnaryExpression;
 import com.intuit.graphql.filter.client.FieldValuePair;
 import com.intuit.graphql.filter.client.FieldValueTransformer;
 
@@ -77,10 +77,12 @@ public class InfixExpressionVisitor implements ExpressionVisitor<String> {
     public String visitCompoundExpression(CompoundExpression compoundExpression, String data) {
         StringBuilder expressionBuilder = new StringBuilder(data);
         expressionBuilder.append("(")
-                        .append(compoundExpression.getLeftOperand().accept(this, ""))
-                        .append(" ").append(compoundExpression.getOperator().getName()).append(" ")
-                        .append(compoundExpression.getRightOperand().accept(this, ""))
-                        .append(")");
+                .append(compoundExpression.getLeftOperand().accept(this, ""))
+                .append(" ")
+                .append(compoundExpression.getOperator().getKey())
+                .append(" ")
+                .append(compoundExpression.getRightOperand().accept(this, ""))
+                .append(")");
         return expressionBuilder.toString();
     }
 
@@ -98,10 +100,12 @@ public class InfixExpressionVisitor implements ExpressionVisitor<String> {
     public String visitBinaryExpression(BinaryExpression binaryExpression, String data) {
         StringBuilder expressionBuilder = new StringBuilder(data);
         expressionBuilder.append("(")
-                        .append(binaryExpression.getLeftOperand().accept(this, ""))
-                        .append(" ").append(binaryExpression.getOperator().getName()).append(" ")
-                        .append(binaryExpression.getRightOperand().accept(this, ""))
-                        .append(")");
+                .append(binaryExpression.getLeftOperand().accept(this, ""))
+                .append(" ")
+                .append(binaryExpression.getOperator().getKey())
+                .append(" ")
+                .append(binaryExpression.getRightOperand().accept(this, ""))
+                .append(")");
         return expressionBuilder.toString();
 
     }
@@ -120,7 +124,9 @@ public class InfixExpressionVisitor implements ExpressionVisitor<String> {
     public String visitUnaryExpression(UnaryExpression unaryExpression, String data) {
         StringBuilder expressionBuilder = new StringBuilder(data);
         expressionBuilder.append("(")
-                .append(" ").append(unaryExpression.getOperator()).append(" ")
+                .append(" ")
+                .append(unaryExpression.getOperator())
+                .append(" ")
                 .append(unaryExpression.getLeftOperand().accept(this, ""))
                 .append(")");
         return expressionBuilder.toString();

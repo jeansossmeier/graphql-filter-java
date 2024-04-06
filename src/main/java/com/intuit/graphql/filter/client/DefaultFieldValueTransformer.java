@@ -16,27 +16,16 @@
 
 package com.intuit.graphql.filter.client;
 
-/**
- * Transformer interface for customizing
- * filter field and value.
- *
- * @author sjaiswal on 11/18/21
- */
-public interface FieldValueTransformer {
+public class DefaultFieldValueTransformer implements FieldValueTransformer {
 
-    /**
-     * Returns a new field name for the given field name.
-     * @param fieldName
-     * @return
-     */
-    String transformField(String fieldName);
+    @Override
+    public String transformField(String fieldName) {
+        return fieldName;
+    }
 
-    /**
-     * Returns an instance of FieldValuePair.
-     * @param fieldName
-     * @param value
-     * @return
-     */
-    FieldValuePair<? extends Object> transformValue(String fieldName, Object value);
+    @Override
+    public FieldValuePair<? extends Object> transformValue(String fieldName, Object value) {
+        return new FieldValuePair<>(fieldName, value);
+    }
 }
 

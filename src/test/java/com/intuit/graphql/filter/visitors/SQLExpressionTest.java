@@ -68,7 +68,7 @@ public class SQLExpressionTest extends BaseFilterExpressionTest {
     public void filterExpressionORWithAND() {
         ExecutionResult result = getGraphQL().execute(TestConstants.COMPOUND_FILER_WITH_OR_AND);
 
-        String expectedExpression = "WHERE ((empFirstName LIKE '%Saurabh%') OR ((lastName = 'Jaiswal') AND (age >= '25')))";
+        String expectedExpression = "WHERE ((empFirstName LIKE '%Saurabh%') OR ((lastName = 'Jaiswal') AND (age >= 25)))";
 
         Assert.assertEquals(expectedExpression,getEmployeeDataFetcher().getSqlExpression());
     }
@@ -77,7 +77,7 @@ public class SQLExpressionTest extends BaseFilterExpressionTest {
     public void filterExpressionANDWithOR() {
         ExecutionResult result = getGraphQL().execute(TestConstants.COMPOUND_FILER_WITH_AND_OR);
 
-        String expectedExpression = "WHERE ((empFirstName LIKE '%Saurabh%') AND ((lastName = 'Jaiswal') OR (age >= '25')))";
+        String expectedExpression = "WHERE ((empFirstName LIKE '%Saurabh%') AND ((lastName = 'Jaiswal') OR (age >= 25)))";
 
         Assert.assertEquals(expectedExpression,getEmployeeDataFetcher().getSqlExpression());
     }
@@ -86,7 +86,7 @@ public class SQLExpressionTest extends BaseFilterExpressionTest {
     public void filterExpressionANDWithMultipleOR() {
         ExecutionResult result = getGraphQL().execute(TestConstants.COMPOUND_FILER_WITH_OR_OR_AND);
 
-        String expectedExpression = "WHERE (((empFirstName LIKE '%Saurabh%') OR (lastName = 'Jaiswal')) OR ((empFirstName = 'Vinod') AND (age >= '30')))";
+        String expectedExpression = "WHERE (((empFirstName LIKE '%Saurabh%') OR (lastName = 'Jaiswal')) OR ((empFirstName = 'Vinod') AND (age >= 30)))";
 
         Assert.assertEquals(expectedExpression,getEmployeeDataFetcher().getSqlExpression());
     }
@@ -95,7 +95,7 @@ public class SQLExpressionTest extends BaseFilterExpressionTest {
     public void filterExpressionORWithMultipleAND() {
         ExecutionResult result = getGraphQL().execute(TestConstants.COMPOUND_FILER_WITH_AND_AND_OR);
 
-        String expectedExpression = "WHERE (((empFirstName LIKE '%Saurabh%') AND (lastName = 'Jaiswal')) AND ((empFirstName = 'Vinod') OR (age >= '30')))";
+        String expectedExpression = "WHERE (((empFirstName LIKE '%Saurabh%') AND (lastName = 'Jaiswal')) AND ((empFirstName = 'Vinod') OR (age >= 30)))";
 
         Assert.assertEquals(expectedExpression,getEmployeeDataFetcher().getSqlExpression());
     }
@@ -133,7 +133,7 @@ public class SQLExpressionTest extends BaseFilterExpressionTest {
     public void filterExpressionWithAgeIn () {
         ExecutionResult result = getGraphQL().execute(TestConstants.AGE_IN);
 
-        String expectedExpression = "WHERE (age IN ('32', '35', '40'))";
+        String expectedExpression = "WHERE (age IN (32, 35, 40))";
 
         Assert.assertEquals(expectedExpression,getEmployeeDataFetcher().getSqlExpression());
     }

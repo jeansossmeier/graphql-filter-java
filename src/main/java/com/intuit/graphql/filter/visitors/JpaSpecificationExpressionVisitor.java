@@ -26,11 +26,10 @@ import com.intuit.graphql.filter.client.FieldValuePair;
 import com.intuit.graphql.filter.client.FieldValueTransformer;
 import org.springframework.data.jpa.domain.Specification;
 
-import javax.persistence.criteria.CriteriaBuilder;
-import javax.persistence.criteria.CriteriaQuery;
-import javax.persistence.criteria.Path;
-import javax.persistence.criteria.Predicate;
-import javax.persistence.criteria.Root;
+import jakarta.persistence.criteria.CriteriaBuilder;
+import jakarta.persistence.criteria.Path;
+import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.HashMap;

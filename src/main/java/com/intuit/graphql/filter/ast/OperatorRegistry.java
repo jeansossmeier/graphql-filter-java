@@ -49,7 +49,7 @@ public class OperatorRegistry {
     private final Map<String, Operator> operators = new HashMap<>();
 
     public void registerOperator(Operator operator) {
-        operators.put(operator.getName(), operator);
+        operators.put(operator.getKey(), operator);
     }
 
     public Operator getOperator(String name) {
@@ -86,5 +86,9 @@ public class OperatorRegistry {
         registry.registerOperator(BETWEEN);
 
         return registry;
+    }
+
+    public Map<String, Operator> getOperators() {
+        return operators;
     }
 }

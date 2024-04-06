@@ -56,7 +56,7 @@ public abstract class AbstractExpression implements Expression {
         expressionBuilder.append("(")
                 .append(getLeftOperand().infix())
                 .append(" ")
-                .append(getOperator().getName())
+                .append(getOperator().getKey())
                 .append(" ")
                 .append(getRightOperand().infix())
                 .append(")");
