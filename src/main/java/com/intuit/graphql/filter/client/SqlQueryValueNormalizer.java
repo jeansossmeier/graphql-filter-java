@@ -7,6 +7,7 @@ import java.util.stream.Collectors;
 
 public class SqlQueryValueNormalizer {
     private static final String SINGLE_QUOTE = "'";
+    private static final String ESCAPED_SINGLE_QUOTE = "''";
     private static final String PARENTHESIS_OPEN = "(";
     private static final String PARENTHESIS_CLOSE = ")";
     private static final String COMMA = ",";
@@ -54,7 +55,8 @@ public class SqlQueryValueNormalizer {
 
     private String sanitizeQuoted(String sanitized) {
         final String unquoted =
-                handleSingleQuotes(sanitized.substring(1, sanitized.length() - 1));
+                handleSingleQuotes(sanitized.substring(1, sanitized.length() - 1))
+                        .replace(SINGLE_QUOTE, ESCAPED_SINGLE_QUOTE);
 
         return SINGLE_QUOTE + queryValueTransformer.apply(unquoted) + SINGLE_QUOTE;
     }
