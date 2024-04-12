@@ -15,6 +15,8 @@
  */
 package com.intuit.graphql.filter.ast;
 
+import java.util.Map;
+
 /**
  * Base class for a node in the
  * expression tree. All concrete expression nodes
@@ -27,6 +29,7 @@ public abstract class AbstractExpression implements Expression {
     private Expression  leftOperand;
     private Operator    operator;
     private Expression  rightOperand;
+    private Map<String, Object> attributes;
 
     /**
      * Default constructor.
@@ -110,4 +113,13 @@ public abstract class AbstractExpression implements Expression {
     public void setRightOperand(Expression rightOperand) {
         this.rightOperand = rightOperand;
     }
+
+    public void setAttributes(Map<String, Object> attributes) {
+        this.attributes = attributes;
+    }
+
+    public Map<String, Object> getAttributes() {
+        return attributes;
+    }
+
 }

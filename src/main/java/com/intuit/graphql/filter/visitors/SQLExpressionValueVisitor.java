@@ -26,7 +26,7 @@ public class SQLExpressionValueVisitor {
     }
 
     public String visitExpressionValue(
-            Operator operator, ExpressionValue<? extends Comparable> expressionValue, String data) {
+            Operator operator, ExpressionValue<? extends Object> expressionValue, String data) {
         final StringBuilder expressionBuilder = new StringBuilder(data);
 
         final ExpressionValueHandler handler = expressionValueHandlers.get(operator);
@@ -43,7 +43,7 @@ public class SQLExpressionValueVisitor {
         return expressionValueHandlers;
     }
 
-    protected String resolveValue(Comparable value) {
+    protected String resolveValue(Object value) {
         if (value instanceof Number) {
             return value.toString();
         } else {
@@ -56,7 +56,7 @@ public class SQLExpressionValueVisitor {
         public void handle(
                 Operator operator,
                 StringBuilder expressionBuilder,
-                ExpressionValue<? extends Comparable> expressionValue) {
+                ExpressionValue<? extends Object> expressionValue) {
 
             final String value = expressionValue.infix();
             if (hasWildcardValue(value)) {
@@ -76,7 +76,7 @@ public class SQLExpressionValueVisitor {
         public void handle(
                 Operator operator,
                 StringBuilder expressionBuilder,
-                ExpressionValue<? extends Comparable> expressionValue) {
+                ExpressionValue<? extends Object> expressionValue) {
 
             expressionBuilder.append("'").append(expressionValue.infix()).append("%").append("'");
         }
@@ -87,7 +87,7 @@ public class SQLExpressionValueVisitor {
         public void handle(
                 Operator operator,
                 StringBuilder expressionBuilder,
-                ExpressionValue<? extends Comparable> expressionValue) {
+                ExpressionValue<? extends Object> expressionValue) {
 
             expressionBuilder.append("'").append("%").append(expressionValue.infix()).append("'");
         }
@@ -98,9 +98,9 @@ public class SQLExpressionValueVisitor {
         public void handle(
                 Operator operator,
                 StringBuilder expressionBuilder,
-                ExpressionValue<? extends Comparable> expressionValue) {
+                ExpressionValue<? extends Object> expressionValue) {
 
-            List<Comparable> expressionValues = (List<Comparable>)expressionValue.value();
+            List<Object> expressionValues = (List<Object>)expressionValue.value();
 
             expressionBuilder
                     .append(resolveValue(expressionValues.get(0)))
@@ -114,9 +114,9 @@ public class SQLExpressionValueVisitor {
         public void handle(
                 Operator operator,
                 StringBuilder expressionBuilder,
-                ExpressionValue<? extends Comparable> expressionValue) {
+                ExpressionValue<? extends Object> expressionValue) {
 
-            final List<Comparable> expressionValues = (List<Comparable>)expressionValue.value();
+            final List<Object> expressionValues = (List<Object>)expressionValue.value();
             expressionBuilder.append("(");
 
             for (int i = 0; i < expressionValues.size(); i++) {

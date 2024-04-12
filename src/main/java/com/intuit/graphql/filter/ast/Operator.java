@@ -47,6 +47,7 @@ public class Operator {
     public static final String TYPE_STRING = "String";
     public static final String TYPE_NUMERIC = "Numeric";
     public static final String TYPE_DATETIME = "DateTime";
+    public static final String TYPE_JSON = "Json";
 
     public static final Operator AND = new Operator("and", Operator.Kind.COMPOUND, TYPE_LOGICAL);
     public static final Operator OR = new Operator("or", Operator.Kind.COMPOUND, TYPE_LOGICAL);
