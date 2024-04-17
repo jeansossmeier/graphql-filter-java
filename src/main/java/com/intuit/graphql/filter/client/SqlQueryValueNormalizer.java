@@ -2,8 +2,11 @@ package com.intuit.graphql.filter.client;
 
 import java.text.Normalizer;
 import java.util.Arrays;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.function.Function;
-import java.util.stream.Collectors;
+
+import static java.util.regex.Matcher.*;
 
 public class SqlQueryValueNormalizer {
     private static final String SINGLE_QUOTE = "'";
@@ -12,6 +15,7 @@ public class SqlQueryValueNormalizer {
     private static final String PARENTHESIS_CLOSE = ")";
     private static final String COMMA = ",";
     private static final String RIGHT_SINGLE_QUOTATION_MARK = "’";
+    private static final Pattern QUOTED_STRING_PATTERN = Pattern.compile("'([^']*)'");
 
     private Function<String, String> queryValueTransformer;
 
@@ -28,37 +32,27 @@ public class SqlQueryValueNormalizer {
             return queryString;
         }
 
-        if (isList(queryString)) {
-            return sanitizeList(queryString);
+        return isList(queryString) ? sanitizeList(queryString) : sanitizeExpression(queryString);
+    }
+
+    private String sanitizeExpression(String input) {
+        final Matcher matcher = QUOTED_STRING_PATTERN.matcher(input);
+        final StringBuilder result = new StringBuilder();
+
+        while (matcher.find()) {
+            final String quotedContent = matcher.group(1);
+            final String sanitizedContent = sanitizeQuoted(quotedContent);
+            matcher.appendReplacement(result, quoteReplacement(SINGLE_QUOTE + sanitizedContent + SINGLE_QUOTE));
         }
 
-        return sanitize(queryString);
+        matcher.appendTail(result);
+        return result.toString();
     }
 
-    private String sanitize(String input) {
-        if (isQuoted(input)) {
-            return sanitizeQuoted(input);
-        } else {
-            return handleSingleQuotes(input);
-        }
-    }
-
-    private String sanitizeList(String sanitized) {
-        final String edgeless = sanitized.substring(1, sanitized.length() - 1);
-        final String sanitizedList =
-                Arrays.stream(edgeless.split(COMMA))
-                        .map(this::sanitize)
-                        .collect(Collectors.joining(","));
-
-        return PARENTHESIS_OPEN + sanitizedList + PARENTHESIS_CLOSE;
-    }
-
-    private String sanitizeQuoted(String sanitized) {
-        final String unquoted =
-                handleSingleQuotes(sanitized.substring(1, sanitized.length() - 1))
-                        .replace(SINGLE_QUOTE, ESCAPED_SINGLE_QUOTE);
-
-        return SINGLE_QUOTE + queryValueTransformer.apply(unquoted) + SINGLE_QUOTE;
+    private String sanitizeQuoted(String content) {
+        final String handledQuotes = handleSingleQuotes(content)
+                .replace(SINGLE_QUOTE, ESCAPED_SINGLE_QUOTE);
+        return queryValueTransformer.apply(handledQuotes);
     }
 
     private static String handleSingleQuotes(String input) {
@@ -66,11 +60,18 @@ public class SqlQueryValueNormalizer {
                 .replace(RIGHT_SINGLE_QUOTATION_MARK, SINGLE_QUOTE);
     }
 
-    private boolean isQuoted(String sanitized) {
-        return sanitized.startsWith(SINGLE_QUOTE) && sanitized.endsWith(SINGLE_QUOTE);
+    private String sanitizeList(String listString) {
+        final String withoutParentheses = listString.substring(1, listString.length() - 1);
+        final String[] values = withoutParentheses.split(COMMA + "\\s*");
+
+        final String sanitizedList = String.join(COMMA + " ", Arrays.stream(values)
+                .map(this::sanitizeExpression)
+                .toArray(String[]::new));
+
+        return PARENTHESIS_OPEN + sanitizedList + PARENTHESIS_CLOSE;
     }
 
-    private boolean isList(String sanitized) {
-        return sanitized.startsWith(PARENTHESIS_OPEN) && sanitized.endsWith(PARENTHESIS_CLOSE);
+    private boolean isList(String input) {
+        return input.startsWith(PARENTHESIS_OPEN) && input.endsWith(PARENTHESIS_CLOSE);
     }
 }

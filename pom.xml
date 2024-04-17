@@ -6,7 +6,7 @@
 
   <groupId>com.intuit.graphql</groupId>
   <artifactId>graphql-filter-java</artifactId>
-  <version>2.1.0</version>
+  <version>2.2.0</version>
 
   <name>${project.artifactId}</name>
   <description>A java library to transform graphql filter into database filter</description>
@@ -159,8 +159,8 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-compiler-plugin</artifactId>
         <configuration>
-          <source>8</source>
-          <target>8</target>
+          <source>17</source>
+          <target>17</target>
         </configuration>
       </plugin>
       <plugin>
