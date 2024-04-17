@@ -133,6 +133,16 @@ public class TestConstants {
             "    }\n" +
             "}";
 
+    public static final String BIRTH_DATE_BETWEEN = "{\n" +
+            "  searchEmployees(filter: {\n" +
+            "    birthDate: {between: [\"1996-12-19T16:39:57-08:00\", \"2024-12-19T16:39:57-08:00\"]}\n" +
+            "  })\n" +
+            "  {\n" +
+            "    firstName\n" +
+            "    lastName\n" +
+            "  }\n" +
+            "}";
+
     public static final String FILTER_WITH_OTHER_ARGS = "{\n" +
             "  searchEmployees (id: \"123\", filter : {\n" +
             "        firstName : {equals: \"Saurabh\"}\n" +
@@ -167,6 +177,16 @@ public class TestConstants {
     public static final String AGE_IN = "{\n" +
             "  searchEmployees(filter: {\n" +
             "    age: {in: [32, 35, 40]}\n" +
+            "  })\n" +
+            "  {\n" +
+            "    firstName\n" +
+            "    lastName\n" +
+            "  }\n" +
+            "}";
+
+    public static final String AGE_BETWEEN = "{\n" +
+            "  searchEmployees(filter: {\n" +
+            "    age: {between: [32, 40]}\n" +
             "  })\n" +
             "  {\n" +
             "    firstName\n" +
