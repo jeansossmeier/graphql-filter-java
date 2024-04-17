@@ -16,6 +16,8 @@
  */
 package com.intuit.graphql.filter.ast;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 
 /**
@@ -26,17 +28,20 @@ import java.util.Objects;
  */
 public class Operator {
     private String key;
-    private String type;
     private Kind kind;
+    private List<String> types;
+    private String type;
 
-    public Operator(String key, Kind kind, String... type) {
+    public Operator(String key, Kind kind, String... types) {
         this.key = key;
         this.kind = kind;
-        this.type = String.join("|", type);
+        this.types = Arrays.asList(types);
+        this.type = String.join("|", types);
     }
 
     public String getKey() { return key; }
     public String getType() { return type; }
+    public List<String> getTypes() { return types; }
     public Kind getKind() { return kind; }
 
     public enum Kind {
