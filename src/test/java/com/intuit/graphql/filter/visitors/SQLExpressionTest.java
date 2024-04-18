@@ -121,6 +121,15 @@ public class SQLExpressionTest extends BaseFilterExpressionTest {
     }
 
     @Test
+    public void filterExpressionWithFirstNameAndLastNameQuotedEquals() {
+        ExecutionResult result = getGraphQL().execute(TestConstants.FIRST_NAME_EQUALS_AND_LAST_NAME_CONTAINS_QUOTED);
+
+        String expectedExpression = "WHERE ((empFirstName = 'Jais''wal') AND (lastName LIKE 'Jack o''%antern'''))";
+
+        Assert.assertEquals(expectedExpression,getEmployeeDataFetcher().getSqlExpression());
+    }
+
+    @Test
     public void filterExpressionWithLastNameIn () {
         ExecutionResult result = getGraphQL().execute(TestConstants.LAST_NAME_IN);
 
