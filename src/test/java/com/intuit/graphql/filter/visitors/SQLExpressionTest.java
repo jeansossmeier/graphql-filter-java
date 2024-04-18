@@ -147,6 +147,25 @@ public class SQLExpressionTest extends BaseFilterExpressionTest {
         Assert.assertEquals(expectedExpression,getEmployeeDataFetcher().getSqlExpression());
     }
 
+
+    @Test
+    public void filterExpressionWithAgeBetween () {
+        ExecutionResult result = getGraphQL().execute(TestConstants.AGE_BETWEEN);
+
+        String expectedExpression = "WHERE (age BETWEEN 32 AND 40)";
+
+        Assert.assertEquals(expectedExpression,getEmployeeDataFetcher().getSqlExpression());
+    }
+
+    @Test
+    public void filterExpressionWithBirthDateBetween () {
+        ExecutionResult result = getGraphQL().execute(TestConstants.BIRTH_DATE_BETWEEN);
+
+        String expectedExpression = "WHERE (birthDate BETWEEN '1996-12-20T00:39:57Z' AND '2024-12-20T00:39:57Z')";
+
+        Assert.assertEquals(expectedExpression,getEmployeeDataFetcher().getSqlExpression());
+    }
+
     @Test
     public void invalidFilterExpression () {
         ExecutionResult result = getGraphQL().execute(TestConstants.INVALID_FILTER);
@@ -209,5 +228,7 @@ public class SQLExpressionTest extends BaseFilterExpressionTest {
 
         Assert.assertEquals(expectedExpression,getEmployeeDataFetcher().getSqlExpression());
     }
+
+
 
 }

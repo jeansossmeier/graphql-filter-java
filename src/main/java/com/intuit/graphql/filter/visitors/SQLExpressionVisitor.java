@@ -1,5 +1,7 @@
 package com.intuit.graphql.filter.visitors;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.intuit.graphql.filter.ast.BinaryExpression;
 import com.intuit.graphql.filter.ast.CompoundExpression;
 import com.intuit.graphql.filter.ast.Expression;
@@ -63,6 +65,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
     private Map<Operator, String> mappings;
     private Map<String, List<String>> metadataCollector;
     private SqlQueryValueNormalizer sqlQueryValueNormalizer;
+    private ObjectMapper objectMapper;
 
     private boolean generateWherePrefix = true;
     private String metadataPrefix = DEFAULT_METADATA_PREFIX;
@@ -76,6 +79,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
         this.expressionValueVisitor = SQLExpressionValueVisitor.DEFAULT;
         this.fieldValueTransformer = DEFAULT_FIELD_VALUE_TRANSFORMER;
         this.sqlQueryValueNormalizer = DEFAULT_NORMALIZER;
+        this.objectMapper = new ObjectMapper();
     }
 
     public SQLExpressionVisitor(
@@ -130,7 +134,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
         operatorStack.push(binaryExpression.getOperator());
 
         final String rightOperand = binaryExpression.getRightOperand().accept(this, "");
-        final String[] filterValues = rightOperand.replaceAll("[()]", "").split(",");
+        final String[] filterValues = rightOperand.replaceAll("[(){}]", "").split(",");
         collectMetadata(leftOperand, filterValues);
 
         if (customExpressionResolver.contains(leftOperand, binaryExpression.getOperator())) {
@@ -228,12 +232,27 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
                     binaryExpression, fieldName, queryString, resolvedOperator);
         }
 
+        if (isJsonQueryString(queryString)) {
+            binaryExpression.setAttributes(stringAsJson(queryString));
+            return customExpression.generateExpression(
+                    binaryExpression, fieldName, queryString, resolvedOperator);
+        }
+
         final String enclosingLogicalOperator =
                 customExpression.getEnclosingLogicalOperator().getValue();
         return Arrays.stream(filterValues)
                 .map(filterValue -> customExpression.generateExpression(
                         binaryExpression, fieldName, normalizeString(filterValue), resolvedOperator))
                 .collect(Collectors.joining(" " + enclosingLogicalOperator + " "));
+    }
+
+    private Map stringAsJson(String queryString) {
+        final String query = queryString.substring(1, queryString.length()-1);
+        try {
+            return objectMapper.readValue(query, Map.class);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     private String formatBinaryExpression(
@@ -273,6 +292,10 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
                             .toString());
         }
         metadataCollector.put(metadataPrefix + metaDataType, filterValueList);
+    }
+
+    private boolean isJsonQueryString(String queryString) {
+        return queryString.startsWith("'{") && queryString.endsWith("}'");
     }
 
     public String resolveOperator(Operator operator) {
@@ -333,5 +356,13 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
 
     public void setCustomExpressionResolver(CustomExpressionResolver customExpressionResolver) {
         this.customExpressionResolver = customExpressionResolver;
+    }
+
+    public ObjectMapper getObjectMapper() {
+        return objectMapper;
+    }
+
+    public void setObjectMapper(ObjectMapper objectMapper) {
+        this.objectMapper = objectMapper;
     }
 }

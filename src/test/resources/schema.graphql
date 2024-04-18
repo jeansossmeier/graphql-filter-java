@@ -43,6 +43,7 @@ input IntExpression {
    lt: Int
    lte: Int
    in: [Int!]
+   between: [Int!]
 }
 
 input DateExpression {
@@ -51,4 +52,5 @@ input DateExpression {
     gte: DateTime
     lt: DateTime
     lte: DateTime
+    between: [DateTime!]
 }

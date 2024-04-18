@@ -7,5 +7,5 @@ public interface ExpressionValueHandler {
     void handle(
             Operator operator,
             StringBuilder expressionBuilder,
-            ExpressionValue<? extends Comparable> expressionValue);
+            ExpressionValue<? extends Object> expressionValue);
 }

@@ -15,6 +15,8 @@
  */
 package com.intuit.graphql.filter.client;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.intuit.graphql.filter.ast.BinaryExpression;
 import com.intuit.graphql.filter.ast.CompoundExpression;
 import com.intuit.graphql.filter.ast.Expression;
@@ -48,13 +50,22 @@ public class FilterExpressionParser {
     private static final String KIND_UNARY = Operator.Kind.UNARY.name();
 
     private final OperatorRegistry operatorRegistry;
+    private final ObjectMapper objectMapper;
+
 
     public FilterExpressionParser() {
         this.operatorRegistry = OperatorRegistry.withDefaultOperators();
+        this.objectMapper = new ObjectMapper();
     }
 
     public FilterExpressionParser(OperatorRegistry operatorRegistry) {
         this.operatorRegistry = operatorRegistry;
+        this.objectMapper = new ObjectMapper();
+    }
+
+    public FilterExpressionParser(OperatorRegistry operatorRegistry, ObjectMapper objectMapper) {
+        this.operatorRegistry = operatorRegistry;
+        this.objectMapper = objectMapper;
     }
 
     public Expression parseFilterExpression(Map filterArgs) {
@@ -102,8 +113,7 @@ public class FilterExpressionParser {
         final ExpressionField leftOperand = new ExpressionField(entry.getKey().toString());
         final BinaryExpression binaryExpression =
                 (entry.getValue() instanceof Map)
-                        ? (BinaryExpression)
-                        createExpressionTree((Map) entry.getValue())
+                        ? (BinaryExpression) createExpressionTree((Map) entry.getValue())
                         : (BinaryExpression) handleBinary(entry, Operator.IN.getKey());
 
         binaryExpression.setLeftOperand(leftOperand);
@@ -115,19 +125,33 @@ public class FilterExpressionParser {
         return new UnaryExpression(operand, getOperator(key), null);
     }
 
-    private Expression handleBinary(Map.Entry entry, String key) {
+    private Expression handleBinary(Map.Entry entry, String key) throws RuntimeException{
         final BinaryExpression binaryExpression = new BinaryExpression();
-        binaryExpression.setOperator(getOperator(key));
+        final Operator operator = getOperator(key);
+        binaryExpression.setOperator(operator);
+
         if (entry.getValue() instanceof Collection) {
-            final List<Comparable> expressionValues = new ArrayList<>();
-            for (Comparable value : (List<Comparable>) entry.getValue()) {
-                expressionValues.add(convertIfDate(value));
+            final List expressionValues = new ArrayList<>();
+            for (Object value : (List) entry.getValue()) {
+                expressionValues.add(convertObject(value));
             }
             binaryExpression.setRightOperand(new ExpressionValue(expressionValues));
-        } else {
-            binaryExpression.setRightOperand(new ExpressionValue<>(convertIfDate((Comparable) entry.getValue())));
+            return binaryExpression;
+        } else if (entry.getValue() instanceof Map) {
+            binaryExpression.setRightOperand(new ExpressionValue<>(getJson(entry)));
+            return binaryExpression;
         }
+
+        binaryExpression.setRightOperand(new ExpressionValue<>(convertObject(entry.getValue())));
         return binaryExpression;
+    }
+
+    private String getJson(Map.Entry entry)  {
+        try {
+            return objectMapper.writeValueAsString(entry.getValue());
+        } catch (JsonProcessingException e) {
+            return "";
+        }
     }
 
     private Expression handleCompound(
@@ -164,6 +188,14 @@ public class FilterExpressionParser {
             return false;
         }
     }
+
+    private Object convertObject(Object value) {
+        if (value instanceof Comparable) {
+            return convertIfDate((Comparable) value);
+        }
+        return value;
+    }
+
     private Comparable convertIfDate(Comparable value) {
         if (value == null) {
             return null;
