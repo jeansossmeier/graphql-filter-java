@@ -55,15 +55,15 @@ public class SqlQueryValueNormalizer {
 
     private String sanitizeQuoted(String sanitized) {
         final String unquoted =
-                handleSingleQuotes(sanitized.substring(1, sanitized.length() - 1))
-                        .replace(SINGLE_QUOTE, ESCAPED_SINGLE_QUOTE);
+                handleSingleQuotes(sanitized.substring(1, sanitized.length() - 1));
 
         return SINGLE_QUOTE + queryValueTransformer.apply(unquoted) + SINGLE_QUOTE;
     }
 
     private static String handleSingleQuotes(String input) {
         return Normalizer.normalize(input, Normalizer.Form.NFC)
-                .replace(RIGHT_SINGLE_QUOTATION_MARK, SINGLE_QUOTE);
+                .replace(RIGHT_SINGLE_QUOTATION_MARK, SINGLE_QUOTE)
+                .replace(SINGLE_QUOTE, ESCAPED_SINGLE_QUOTE);
     }
 
     private boolean isQuoted(String sanitized) {

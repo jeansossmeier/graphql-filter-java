@@ -154,6 +154,17 @@ public class TestConstants {
             "    }\n" +
             "}";
 
+    public static final String FIRST_NAME_EQUALS_AND_LAST_NAME_CONTAINS_QUOTED = "{\n" +
+            "  searchEmployees(filter: {\n" +
+            "      and : [{ firstName : {equals : \"Jais'wal\"}},{ lastName : {contains : \"Jack o'%antern'\"}}]\n" +
+            "  })\n" +
+            "  {\n" +
+            "    firstName\n" +
+            "    lastName\n" +
+            "  }\n" +
+            "}";
+
+
     public static final String LAST_NAME_IN = "{\n" +
             "  searchEmployees(filter: {\n" +
             "    lastName: {in: [\"Jaiswal\",\"Gupta\",\"Kumar\"]}\n" +

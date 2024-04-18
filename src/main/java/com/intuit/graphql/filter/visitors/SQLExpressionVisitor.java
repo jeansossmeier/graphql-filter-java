@@ -133,13 +133,12 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
         final String[] filterValues = rightOperand.replaceAll("[()]", "").split(",");
         collectMetadata(leftOperand, filterValues);
 
-        final String normalizedRightOperand = normalizeString(rightOperand);
         if (customExpressionResolver.contains(leftOperand, binaryExpression.getOperator())) {
             final String resolvedOperator = resolveOperator(binaryExpression.getOperator());
             return formatCustomBinaryExpression(
-                    data, leftOperand, resolvedOperator, normalizedRightOperand, binaryExpression, filterValues);
+                    data, leftOperand, resolvedOperator, rightOperand, binaryExpression, filterValues);
         } else {
-            return formatBinaryExpression(data, leftOperand, binaryExpression, normalizedRightOperand);
+            return formatBinaryExpression(data, leftOperand, binaryExpression, rightOperand);
         }
     }
 
@@ -171,13 +170,14 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
     @Override
     public String visitExpressionField(final ExpressionField field, final String data) {
         final StringBuilder expressionBuilder = new StringBuilder(data);
-        if (fieldMap != null && fieldMap.get(field.infix()) != null) {
-            expressionBuilder.append(fieldMap.get(field.infix()));
-        } else if (fieldValueTransformer != null && fieldValueTransformer.transformField(field.infix()) != null) {
-            expressionBuilder.append(fieldValueTransformer.transformField(field.infix()));
+        final String infix = field.infix();
+        if (fieldMap != null && fieldMap.get(infix) != null) {
+            expressionBuilder.append(fieldMap.get(infix));
+        } else if (fieldValueTransformer != null && fieldValueTransformer.transformField(infix) != null) {
+            expressionBuilder.append(fieldValueTransformer.transformField(infix));
             fieldStack.push(field); //pushing the field for lookup while visiting value.
         } else {
-            expressionBuilder.append(field.infix());
+            expressionBuilder.append(infix);
         }
         return expressionBuilder.toString();
     }
@@ -190,20 +190,27 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
      * @return Data of processed node.
      */
     @Override
-    public String visitExpressionValue(
-            final ExpressionValue<? extends Comparable> expressionValue, final String data) {
-
-        final Operator operator = operatorStack.pop();
-        ExpressionValue<? extends Comparable> value = expressionValue;
+    public String visitExpressionValue(final ExpressionValue expressionValue, final String data) {
+        final Operator operator = operatorStack.pop();ExpressionValue value = expressionValue;
         if (!fieldStack.isEmpty() && fieldValueTransformer != null) {
             ExpressionField field  = fieldStack.pop(); // pop the field associated with this value.
-            FieldValuePair fieldValuePair = fieldValueTransformer.transformValue(field.infix(),value.value());
+            FieldValuePair fieldValuePair = fieldValueTransformer.transformValue(field.infix(), value.value());
             if (fieldValuePair != null && fieldValuePair.getValue() != null) {
-                value = new ExpressionValue(fieldValuePair.getValue());
+                final ExpressionValue newExpressionValue = getNormalizedFieldExpressionValue(fieldValuePair.getValue());
+                expressionValueVisitor.visitExpressionValue(operator, newExpressionValue, data);
             }
         }
 
-        return expressionValueVisitor.visitExpressionValue(operator, value, data);
+        final ExpressionValue normalizedExpression = getNormalizedFieldExpressionValue(expressionValue.value());
+        return expressionValueVisitor.visitExpressionValue(operator, normalizedExpression, data);
+    }
+
+    private ExpressionValue getNormalizedFieldExpressionValue(Object value) {
+        if (value instanceof String) {
+            return new ExpressionValue(normalizeString((String) value));
+        } else {
+            return new ExpressionValue(value);
+        }
     }
 
     private String prepareCustomExpression(
