@@ -278,4 +278,12 @@ public class TestConstants {
             "  }\n" +
             "}";
 
+    public static final String FIRST_NAME_SPECIAL_CHAR_EQUALS = "{\n" +
+            "  searchEmployees(filter: {\n" +
+            "    firstName : {equals: \"Máx's \\\"\"}\n" +
+            "  }) {\n" +
+            "    firstName\n" +
+            "    lastName\n" +
+            "  }\n" +
+            "}";
 }

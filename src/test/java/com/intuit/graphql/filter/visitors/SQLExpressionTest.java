@@ -229,6 +229,12 @@ public class SQLExpressionTest extends BaseFilterExpressionTest {
         Assert.assertEquals(expectedExpression,getEmployeeDataFetcher().getSqlExpression());
     }
 
+    @Test
+    public void firstNameSpecialCharacterExpressionWithEquals() {
+        ExecutionResult result = getGraphQL().execute(TestConstants.FIRST_NAME_SPECIAL_CHAR_EQUALS);
 
+        String expectedExpression = "WHERE (empFirstName = 'Máx''s \"')";
 
+        Assert.assertEquals(expectedExpression,getEmployeeDataFetcher().getSqlExpression());
+    }
 }
