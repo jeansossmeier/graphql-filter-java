@@ -229,7 +229,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
 
         if (filterValues.length == 1) {
             return customExpression.generateExpression(
-                    binaryExpression, fieldName, normalizeString(queryString), resolvedOperator);
+                    binaryExpression, fieldName, queryString, resolvedOperator);
         }
 
         if (isJsonQueryString(queryString)) {
