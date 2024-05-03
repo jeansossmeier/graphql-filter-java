@@ -243,6 +243,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
         return Arrays.stream(filterValues)
                 .map(filterValue -> customExpression.generateExpression(
                         binaryExpression, fieldName, filterValue, resolvedOperator))
+                .map(filter -> "(" + filter + ")")
                 .collect(Collectors.joining(" " + enclosingLogicalOperator + " "));
     }
 

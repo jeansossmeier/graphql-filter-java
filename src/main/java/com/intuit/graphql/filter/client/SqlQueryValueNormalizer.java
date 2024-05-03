@@ -23,7 +23,8 @@ public class SqlQueryValueNormalizer {
         this.queryValueTransformer = queryValueTransformer;
     }
 
-    public String handle(String queryString) {
+    public String handle(final String input) {
+        final String queryString = input.trim();
         if (queryString == null || queryString.isEmpty()) {
             return queryString;
         }
@@ -44,7 +45,7 @@ public class SqlQueryValueNormalizer {
     }
 
     private String sanitizeList(String sanitized) {
-        final String edgeless = sanitized.substring(1, sanitized.length() - 1);
+        final String edgeless = unquote(sanitized);
         final String sanitizedList =
                 Arrays.stream(edgeless.split(COMMA))
                         .map(this::sanitize)
@@ -53,10 +54,12 @@ public class SqlQueryValueNormalizer {
         return PARENTHESIS_OPEN + sanitizedList + PARENTHESIS_CLOSE;
     }
 
-    private String sanitizeQuoted(String sanitized) {
-        final String unquoted =
-                handleSingleQuotes(sanitized.substring(1, sanitized.length() - 1));
+    private static String unquote(String sanitized) {
+        return sanitized.substring(1, sanitized.length() - 1);
+    }
 
+    private String sanitizeQuoted(String sanitized) {
+        final String unquoted = handleSingleQuotes(unquote(sanitized));
         return SINGLE_QUOTE + queryValueTransformer.apply(unquoted) + SINGLE_QUOTE;
     }
 
