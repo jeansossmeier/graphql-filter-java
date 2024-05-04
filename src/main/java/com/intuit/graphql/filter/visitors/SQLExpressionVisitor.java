@@ -212,9 +212,20 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
     private ExpressionValue getNormalizedFieldExpressionValue(Object value) {
         if (value instanceof String) {
             return new ExpressionValue(normalizeString((String) value));
-        } else {
-            return new ExpressionValue(value);
+        } else if (value instanceof List) {
+            final List<?> values = (List) value;
+            final List<Object> normalizedValues = values.stream().map(object -> {
+                if (object instanceof String) {
+                    return normalizeString((String) object);
+                } else {
+                    return object;
+                }
+            }).toList();
+
+            return new ExpressionValue(normalizedValues);
         }
+
+        return new ExpressionValue(value);
     }
 
     private String prepareCustomExpression(
@@ -242,7 +253,7 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
                 customExpression.getEnclosingLogicalOperator().getValue();
         return Arrays.stream(filterValues)
                 .map(filterValue -> customExpression.generateExpression(
-                        binaryExpression, fieldName, normalizeString(filterValue), resolvedOperator))
+                        binaryExpression, fieldName, filterValue, resolvedOperator))
                 .map(filter -> "(" + filter + ")")
                 .collect(Collectors.joining(" " + enclosingLogicalOperator + " "));
     }
