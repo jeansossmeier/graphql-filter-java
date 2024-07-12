@@ -43,6 +43,15 @@ public class TestConstants {
             "      age\n" +
             "    }\n" +
             "}";
+
+    public static final String BINARY_FILER_SINGLE_DIGIT_INT = "{\n" +
+            "  searchEmployees (filter : { age: {gte: 5}}) {\n" +
+            "      firstName\n" +
+            "      lastName\n" +
+            "      age\n" +
+            "    }\n" +
+            "}";
+
     public static final String COMPOUND_FILER_WITH_OR = "{\n" +
             "  searchEmployees (filter : {\n" +
             "      or : [{ firstName : {contains : \"Saurabh\"}},{ lastName : {equals : \"Jaiswal\"}}]\n" +

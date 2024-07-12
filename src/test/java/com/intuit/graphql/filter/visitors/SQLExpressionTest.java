@@ -47,6 +47,15 @@ public class SQLExpressionTest extends BaseFilterExpressionTest {
     }
 
     @Test
+    public void filterExpressionSimpleSingleDigitInt() {
+        ExecutionResult result = getGraphQL().execute(TestConstants.BINARY_FILER_SINGLE_DIGIT_INT);
+
+        String expectedExpression = "WHERE (age >= 5)";
+
+        Assert.assertEquals(expectedExpression,getEmployeeDataFetcher().getSqlExpression());
+    }
+
+    @Test
     public void filterExpressionWithOR() {
         ExecutionResult result = getGraphQL().execute(TestConstants.COMPOUND_FILER_WITH_OR);
 

@@ -294,16 +294,25 @@ public class SQLExpressionVisitor implements ExpressionVisitor<String> {
     private void collectMetadata(final String metaDataType, final String[] filterValues) {
         final List<String> filterValueList = new ArrayList<>();
         for (String filterValue : filterValues) {
-            final String normalizedFilterValue =
-                    filterValue.replace(DOUBLE_QUOTE, ESCAPED_DOUBLE_QUOTE);
-            filterValueList.add(
-                    new StringBuilder()
-                            .append(DOUBLE_QUOTE)
-                            .append(normalizedFilterValue, 1, normalizedFilterValue.length() - 1)
-                            .append(DOUBLE_QUOTE)
-                            .toString());
+            if (filterValue.contains(DOUBLE_QUOTE)) {
+                filterValueList.add(normalizeDoubleQuotes(filterValue));
+            } else {
+                filterValueList.add(filterValue);
+            }
         }
+
         metadataCollector.put(metadataPrefix + metaDataType, filterValueList);
+    }
+
+    private String normalizeDoubleQuotes(String filterValue) {
+        final String normalizedFilterValue =
+                filterValue.replace(DOUBLE_QUOTE, ESCAPED_DOUBLE_QUOTE);
+
+        return new StringBuilder()
+                .append(DOUBLE_QUOTE)
+                .append(normalizedFilterValue, 1, normalizedFilterValue.length() - 1)
+                .append(DOUBLE_QUOTE)
+                .toString();
     }
 
     private boolean isJsonQueryString(String queryString) {
